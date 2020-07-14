@@ -230,7 +230,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
 
             case AttributeEvent.ATTITUDE_UPDATED:
-                updateTest();
+                updateYAW();
+                break;
+
+            case AttributeEvent.GPS_COUNT:
+                updateSatellite();
                 break;
 
             default:
@@ -432,10 +436,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         batteryTextView.setText(String.format("전압: %3.1f", droneBattery.getBatteryVoltage()) + "v");
     }
 
-    protected void updateTest(){
-        TextView dronwYAWTextView = (TextView) findViewById(R.id.attitudeYAWTextView);
+    protected void updateYAW(){
+        TextView droneYAWTextView = (TextView) findViewById(R.id.YAWTextView);
         Attitude droneAttitude = this.drone.getAttribute(AttributeType.ATTITUDE);
-        dronwYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw() + "deg"));
+        //droneYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw() + "deg"));
+
+        droneYAWTextView.setText(String.format(Double.toString(droneAttitude.getYaw())));
+    }
+
+    protected void updateSatellite(){
+        TextView droneSatellite = (TextView) findViewById(R.id.satelliteTextView);
+        Gps droneGPS = this.drone.getAttribute(AttributeType.GPS);
+        //droneSatellite.setText(String.format("위성: %d", 14));
+        droneSatellite.setText(String.format("위성: %d", droneGPS.getSatellitesCount()));
     }
 
     // Helper methods
