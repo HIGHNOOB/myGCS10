@@ -50,6 +50,8 @@ import com.o3dr.services.android.lib.drone.companion.solo.SoloState;
 import com.o3dr.services.android.lib.drone.connection.ConnectionParameter;
 import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
+import com.o3dr.services.android.lib.drone.property.Attitude;
+import com.o3dr.services.android.lib.drone.property.Battery;
 import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.drone.property.Home;
 import com.o3dr.services.android.lib.drone.property.Speed;
@@ -223,6 +225,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 //updateDistanceFromHome();
                 break;
 
+            case AttributeEvent.BATTERY_UPDATED:
+                updateBattery();
+                break;
+
+            case AttributeEvent.ATTITUDE_UPDATED:
+                updateTest();
+                break;
+
             default:
                 // Log.i("DRONE_EVENT", event); //Uncomment to see events from the drone
                 break;
@@ -371,13 +381,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void updateAltitude() {
         TextView altitudeTextView = (TextView) findViewById(R.id.altitudeValueTextView);
         Altitude droneAltitude = this.drone.getAttribute(AttributeType.ALTITUDE);
-        altitudeTextView.setText(String.format("%3.1f", droneAltitude.getAltitude()) + "m");
+        altitudeTextView.setText(String.format("고도: %3.1f", droneAltitude.getAltitude()) + "m");
     }
 
     protected void updateSpeed() {
         TextView speedTextView = (TextView) findViewById(R.id.speedValueTextView);
         Speed droneSpeed = this.drone.getAttribute(AttributeType.SPEED);
-        speedTextView.setText(String.format("%3.1f", droneSpeed.getGroundSpeed()) + "m/s");
+        speedTextView.setText(String.format("속도: %3.1f", droneSpeed.getGroundSpeed()) + "m/s");
     }
     //TODO 사용하지 않는 함수 001
 /*
@@ -414,6 +424,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         VehicleMode vehicleMode = vehicleState.getVehicleMode();
         ArrayAdapter arrayAdapter = (ArrayAdapter) this.modeSelector.getAdapter();
         this.modeSelector.setSelection(arrayAdapter.getPosition(vehicleMode));
+    }
+
+    protected void updateBattery(){
+        TextView batteryTextView = (TextView) findViewById(R.id.batteryBalueTextView);
+        Battery droneBattery = this.drone.getAttribute(AttributeType.BATTERY);
+        batteryTextView.setText(String.format("전압: %3.1f", droneBattery.getBatteryVoltage()) + "v");
+    }
+
+    protected void updateTest(){
+        TextView dronwYAWTextView = (TextView) findViewById(R.id.attitudeYAWTextView);
+        Attitude droneAttitude = this.drone.getAttribute(AttributeType.ATTITUDE);
+        dronwYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw() + "deg"));
     }
 
     // Helper methods
