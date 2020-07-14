@@ -82,7 +82,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="20dp"
-        android:background="#9A9C27B0"
+        android:background="#80000000"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -91,10 +91,12 @@
         app:layout_constraintVertical_bias="0">
 
         <TextView
-            android:id="@+id/textView2"
+            android:id="@+id/batteryBalueTextView"
+            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="전압" />
 
         <Spinner
@@ -105,31 +107,40 @@
 
         <TextView
             android:id="@+id/altitudeValueTextView"
+            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="고도" />
 
         <TextView
             android:id="@+id/speedValueTextView"
+            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="속도" />
 
         <TextView
-            android:id="@+id/textView5"
+            android:id="@+id/attitudeYAWTextView"
+            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="YAW" />
 
         <TextView
             android:id="@+id/textView6"
+            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="위성" />
+
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
