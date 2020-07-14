@@ -29,6 +29,7 @@ import com.naver.maps.map.NaverMap;
 import com.naver.maps.map.OnMapReadyCallback;
 import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
+import com.naver.maps.map.overlay.PolylineOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
@@ -63,6 +64,8 @@ import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.o3dr.android.client.apis.ExperimentalApi.getApi;
@@ -97,6 +100,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String videoTag = "testvideotag";
 
     Handler mainHandler;
+
+    PolylineOverlay polyline = new PolylineOverlay();
+    ArrayList<LatLng> droneMovePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -235,6 +241,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             case AttributeEvent.GPS_COUNT:
                 updateSatellite();
+                break;
+
+            case AttributeEvent.GPS_POSITION:
+                updateMap();
                 break;
 
             default:
@@ -439,9 +449,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void updateYAW(){
         TextView droneYAWTextView = (TextView) findViewById(R.id.YAWTextView);
         Attitude droneAttitude = this.drone.getAttribute(AttributeType.ATTITUDE);
-        //droneYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw() + "deg"));
+        droneYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw()) + "deg");
 
-        droneYAWTextView.setText(String.format(Double.toString(droneAttitude.getYaw())));
+        //droneYAWTextView.setText(String.format(Double.toString(droneAttitude.getYaw())));
     }
 
     protected void updateSatellite(){
@@ -449,6 +459,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Gps droneGPS = this.drone.getAttribute(AttributeType.GPS);
         //droneSatellite.setText(String.format("위성: %d", 14));
         droneSatellite.setText(String.format("위성: %d", droneGPS.getSatellitesCount()));
+    }
+    protected void updateMap(){
+
+        LatLong currentLatlongLocation = getCurrentLocation();
+        LatLng currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
+        droneMovePath.add(currentLatlngLocation);
+        polyline.setCoords(droneMovePath);
+        polyline.setMap(naverMap);
+
+    }
+    protected LatLong getCurrentLocation(){
+        Gps gps = this.drone.getAttribute(AttributeType.GPS);
+        return gps.getPosition();
     }
 
     // Helper methods
