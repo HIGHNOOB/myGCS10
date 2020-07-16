@@ -18,6 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.naver.maps.geometry.LatLng;
+import com.naver.maps.map.CameraPosition;
 import com.naver.maps.map.LocationTrackingMode;
 import com.naver.maps.map.MapFragment;
 import com.naver.maps.map.NaverMap;
@@ -384,7 +385,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void updateSatellite(){
         TextView droneSatellite = (TextView) findViewById(R.id.satelliteTextView);
         Gps droneGPS = this.drone.getAttribute(AttributeType.GPS);
-        //droneSatellite.setText(String.format("위성: %d", 14));
         droneSatellite.setText(String.format("위성: %d", droneGPS.getSatellitesCount()));
     }
 
@@ -394,6 +394,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         droneMarker.setPosition(currentLatlngLocation);
         droneMarker.setMap(naverMap);
+
+        //zoom 21~0
+        naverMap.setCameraPosition(new CameraPosition(currentLatlngLocation,18));
+        naverMap.zoom
     }
 
     protected LatLong getCurrentLocation(){
@@ -484,7 +488,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setDroneMarkerDefault(){
-        droneMarker.setIcon(OverlayImage.fromResource(R.drawable.ic_stat_notify));
+        droneMarker.setIcon(MarkerIcons.BLUE);
     }
 
     //TODO 앱 종료됨
