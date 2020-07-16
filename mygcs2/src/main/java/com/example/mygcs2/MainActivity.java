@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import com.naver.maps.geometry.LatLng;
 import com.naver.maps.map.CameraPosition;
+import com.naver.maps.map.CameraUpdate;
 import com.naver.maps.map.LocationTrackingMode;
 import com.naver.maps.map.MapFragment;
 import com.naver.maps.map.NaverMap;
@@ -53,6 +54,8 @@ import com.o3dr.services.android.lib.drone.property.VehicleMode;
 import com.o3dr.services.android.lib.gcs.link.LinkConnectionStatus;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
+
+import org.droidplanner.services.android.impl.core.drone.variables.Camera;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -395,9 +398,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         droneMarker.setPosition(currentLatlngLocation);
         droneMarker.setMap(naverMap);
 
-        //zoom 21~0
-        naverMap.setCameraPosition(new CameraPosition(currentLatlngLocation,18));
-        naverMap.zoom
+        CameraUpdate cameraUpdate = CameraUpdate.scrollTo(currentLatlngLocation);
+        naverMap.moveCamera(cameraUpdate);
     }
 
     protected LatLong getCurrentLocation(){
@@ -488,7 +490,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setDroneMarkerDefault(){
-        droneMarker.setIcon(MarkerIcons.BLUE);
+        droneMarker.setIcon(OverlayImage.fromResource(R.drawable.birdtopview));
     }
 
     //TODO 앱 종료됨
