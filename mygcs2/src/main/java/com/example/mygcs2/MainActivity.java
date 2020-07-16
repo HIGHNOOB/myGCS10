@@ -2,18 +2,13 @@ package com.example.mygcs2;
 
 import android.content.Context;
 import android.graphics.PointF;
-import android.graphics.SurfaceTexture;
 import android.location.Location;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.support.annotation.NonNull;
-import android.support.annotation.UiThread;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Surface;
-import android.view.TextureView;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -29,32 +24,27 @@ import com.naver.maps.map.NaverMap;
 import com.naver.maps.map.OnMapReadyCallback;
 import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
+import com.naver.maps.map.overlay.OverlayImage;
 import com.naver.maps.map.overlay.PolylineOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
+import com.naver.maps.map.util.MarkerIcons;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.ControlApi;
-import com.o3dr.android.client.apis.ExperimentalApi;
 import com.o3dr.android.client.apis.VehicleApi;
-import com.o3dr.android.client.apis.solo.SoloCameraApi;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.LinkListener;
 import com.o3dr.android.client.interfaces.TowerListener;
-import com.o3dr.android.client.utils.video.DecoderListener;
-import com.o3dr.android.client.utils.video.MediaCodecManager;
 import com.o3dr.services.android.lib.coordinate.LatLong;
-import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloAttributes;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloState;
 import com.o3dr.services.android.lib.drone.connection.ConnectionParameter;
-import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
 import com.o3dr.services.android.lib.drone.property.Attitude;
 import com.o3dr.services.android.lib.drone.property.Battery;
 import com.o3dr.services.android.lib.drone.property.Gps;
-import com.o3dr.services.android.lib.drone.property.Home;
 import com.o3dr.services.android.lib.drone.property.Speed;
 import com.o3dr.services.android.lib.drone.property.State;
 import com.o3dr.services.android.lib.drone.property.Type;
@@ -63,12 +53,8 @@ import com.o3dr.services.android.lib.gcs.link.LinkConnectionStatus;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import static com.o3dr.android.client.apis.ExperimentalApi.getApi;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         DroneListener, TowerListener, LinkListener {
@@ -82,27 +68,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ControlTower controlTower;
     private final Handler handler = new Handler();
 
-    private static final int DEFAULT_UDP_PORT = 14550;
-    private static final int DEFAULT_USB_BAUD_RATE = 57600;
-
     private Spinner modeSelector;
 
-    private Button startVideoStream;
-    private Button stopVideoStream;
-
-    private Button startVideoStreamUsingObserver;
-    private Button stopVideoStreamUsingObserver;
-
-    private MediaCodecManager mediaCodecManager;
-
-    private TextureView videoView;
-
-    private String videoTag = "testvideotag";
-
-    Handler mainHandler;
-
-    PolylineOverlay polyline = new PolylineOverlay();
-    ArrayList<LatLng> droneMovePath;
+    private Marker droneMarker = new Marker();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,17 +94,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
-        // Initialize media codec manager to decode video stream packets.
-        HandlerThread mediaCodecHandlerThread = new HandlerThread("MediaCodecHandlerThread");
-        mediaCodecHandlerThread.start();
-        Handler mediaCodecHandler = new Handler(mediaCodecHandlerThread.getLooper());
-        mediaCodecManager = new MediaCodecManager(mediaCodecHandler);
-
-        mainHandler = new Handler(getApplicationContext().getMainLooper());
-
-
-        // ↓아래로 원본 onCreate
-
+        // ↓ map sync
         FragmentManager fm = getSupportFragmentManager();
         MapFragment mapFragment = (MapFragment)fm.findFragmentById(R.id.map);
         if (mapFragment == null) {
@@ -146,6 +104,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
         locationSource =
                 new FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE);
+
+        setDroneMarkerDefault();
     }
 
     @Override
@@ -167,9 +127,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         this.controlTower.disconnect();
     }
 
-    // DroneKit-Android Listener
-    // ==========================================================
-
     @Override
     public void onTowerConnected() {
         alertUser("DroneKit-Android Connected");
@@ -181,9 +138,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onTowerDisconnected() {
         alertUser("DroneKit-Android Interrupted");
     }
-
-    // Drone Listener
-    // ==========================================================
 
     @Override
     public void onDroneEvent(String event, Bundle extras) {
@@ -244,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
 
             case AttributeEvent.GPS_POSITION:
-                updateMap();
+                updateDroneMarker();
                 break;
 
             default:
@@ -267,9 +221,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onDroneServiceInterrupted(String errorMsg) {
 
     }
-
-    // UI Events
-    // ==========================================================
 
     public void onBtnConnectTap(View view) {
         if (this.drone.isConnected())
@@ -358,9 +309,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    // UI updating
-    // ==========================================================
-
     protected void updateConnectedButton(Boolean isConnected) {
         Button connectButton = (Button) findViewById(R.id.btnConnect);
         if (isConnected) {
@@ -403,28 +351,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Speed droneSpeed = this.drone.getAttribute(AttributeType.SPEED);
         speedTextView.setText(String.format("속도: %3.1f", droneSpeed.getGroundSpeed()) + "m/s");
     }
-    //TODO 사용하지 않는 함수 001
-/*
-    protected void updateDistanceFromHome() {
-        TextView distanceTextView = (TextView) findViewById(R.id.distanceValueTextView);
-        Altitude droneAltitude = this.drone.getAttribute(AttributeType.ALTITUDE);
-        double vehicleAltitude = droneAltitude.getAltitude();
-        Gps droneGps = this.drone.getAttribute(AttributeType.GPS);
-        LatLong vehiclePosition = droneGps.getPosition();
-
-        double distanceFromHome = 0;
-
-        if (droneGps.isValid()) {
-            LatLongAlt vehicle3DPosition = new LatLongAlt(vehiclePosition.getLatitude(), vehiclePosition.getLongitude(), vehicleAltitude);
-            Home droneHome = this.drone.getAttribute(AttributeType.HOME);
-            distanceFromHome = distanceBetweenPoints(droneHome.getCoordinate(), vehicle3DPosition);
-        } else {
-            distanceFromHome = 0;
-        }
-
-        distanceTextView.setText(String.format("%3.1f", distanceFromHome) + "m");
-    }
-*/
 
     protected void updateVehicleModesForType(int droneType) {
         List<VehicleMode> vehicleModes = VehicleMode.getVehicleModePerDroneType(droneType);
@@ -449,9 +375,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void updateYAW(){
         TextView droneYAWTextView = (TextView) findViewById(R.id.YAWTextView);
         Attitude droneAttitude = this.drone.getAttribute(AttributeType.ATTITUDE);
-        droneYAWTextView.setText(String.format("YAW: %3.1f", droneAttitude.getYaw()) + "deg");
+        double droneYaW = droneAttitude.getYaw();
+        droneYAWTextView.setText(String.format("YAW: %3.1f", droneYaW) + "deg");
 
-        //droneYAWTextView.setText(String.format(Double.toString(droneAttitude.getYaw())));
+        droneMarker.setAngle((float)(droneYaW + 360));
     }
 
     protected void updateSatellite(){
@@ -460,264 +387,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         //droneSatellite.setText(String.format("위성: %d", 14));
         droneSatellite.setText(String.format("위성: %d", droneGPS.getSatellitesCount()));
     }
-    protected void updateMap(){
 
+    protected void updateDroneMarker(){
         LatLong currentLatlongLocation = getCurrentLocation();
         LatLng currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
-        droneMovePath.add(currentLatlngLocation);
-        polyline.setCoords(droneMovePath);
-        polyline.setMap(naverMap);
 
+        droneMarker.setPosition(currentLatlngLocation);
+        droneMarker.setMap(naverMap);
     }
+
     protected LatLong getCurrentLocation(){
         Gps gps = this.drone.getAttribute(AttributeType.GPS);
         return gps.getPosition();
     }
 
-    // Helper methods
-    // ==========================================================
-
     protected void alertUser(String message) {
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
         Log.d(TAG, message);
-    }
-
-    private void runOnMainThread(Runnable runnable) {
-        mainHandler.post(runnable);
-    }
-
-    protected double distanceBetweenPoints(LatLongAlt pointA, LatLongAlt pointB) {
-        if (pointA == null || pointB == null) {
-            return 0;
-        }
-        double dx = pointA.getLatitude() - pointB.getLatitude();
-        double dy = pointA.getLongitude() - pointB.getLongitude();
-        double dz = pointA.getAltitude() - pointB.getAltitude();
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
-    private void takePhoto() {
-        SoloCameraApi.getApi(drone).takePhoto(new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Photo taken.");
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUser("Error while trying to take the photo: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timeout while trying to take the photo.");
-            }
-        });
-    }
-
-    private void toggleVideoRecording() {
-        SoloCameraApi.getApi(drone).toggleVideoRecording(new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Video recording toggled.");
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUser("Error while trying to toggle video recording: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timeout while trying to toggle video recording.");
-            }
-        });
-    }
-
-    private void startVideoStream(Surface videoSurface) {
-        SoloCameraApi.getApi(drone).startVideoStream(videoSurface, videoTag, true, new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                alertUser("Successfully started the video stream. ");
-
-                if (stopVideoStream != null)
-                    stopVideoStream.setEnabled(true);
-
-                if (startVideoStream != null)
-                    startVideoStream.setEnabled(false);
-
-                if (startVideoStreamUsingObserver != null)
-                    startVideoStreamUsingObserver.setEnabled(false);
-
-                if (stopVideoStreamUsingObserver != null)
-                    stopVideoStreamUsingObserver.setEnabled(false);
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUser("Error while starting the video stream: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timed out while attempting to start the video stream.");
-            }
-        });
-    }
-
-    DecoderListener decoderListener = new DecoderListener() {
-        @Override
-        public void onDecodingStarted() {
-            alertUser("MediaCodecManager: video decoding started...");
-        }
-
-        @Override
-        public void onDecodingError() {
-            alertUser("MediaCodecManager: video decoding error...");
-        }
-
-        @Override
-        public void onDecodingEnded() {
-            alertUser("MediaCodecManager: video decoding ended...");
-        }
-    };
-
-    private void startVideoStreamForObserver() {
-        getApi(drone).startVideoStream(videoTag, new ExperimentalApi.IVideoStreamCallback() {
-            @Override
-            public void onVideoStreamConnecting() {
-                runOnMainThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        alertUser("Successfully obtained lock for drone video stream.");
-                    }
-                });
-            }
-
-            @Override
-            public void onVideoStreamConnected() {
-                runOnMainThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        alertUser("Successfully opened drone video connection.");
-
-                        if (stopVideoStreamUsingObserver != null)
-                            stopVideoStreamUsingObserver.setEnabled(true);
-
-                        if (startVideoStreamUsingObserver != null)
-                            startVideoStreamUsingObserver.setEnabled(false);
-
-                        if (stopVideoStream != null)
-                            stopVideoStream.setEnabled(false);
-
-                        if (startVideoStream != null)
-                            startVideoStream.setEnabled(false);
-                    }
-                });
-
-                mediaCodecManager.stopDecoding(new DecoderListener() {
-                    @Override
-                    public void onDecodingStarted() {
-                    }
-
-                    @Override
-                    public void onDecodingError() {
-                    }
-
-                    @Override
-                    public void onDecodingEnded() {
-                        try {
-                            mediaCodecManager.startDecoding(new Surface(videoView.getSurfaceTexture()),
-                                    decoderListener);
-                        } catch (IOException | IllegalStateException e) {
-                            Log.e(TAG, "Unable to create media codec.", e);
-                            if (decoderListener != null)
-                                decoderListener.onDecodingError();
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onVideoStreamDisconnecting() {
-                runOnMainThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        alertUser("Successfully released lock for drone video stream.");
-                    }
-                });
-            }
-
-            @Override
-            public void onVideoStreamDisconnected() {
-                runOnMainThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        alertUser("Successfully closed drone video connection.");
-
-                        if (stopVideoStreamUsingObserver != null)
-                            stopVideoStreamUsingObserver.setEnabled(false);
-
-                        if (startVideoStreamUsingObserver != null)
-                            startVideoStreamUsingObserver.setEnabled(true);
-
-                        if (stopVideoStream != null)
-                            stopVideoStream.setEnabled(false);
-
-                        if (startVideoStream != null)
-                            startVideoStream.setEnabled(true);
-                    }
-                });
-
-                mediaCodecManager.stopDecoding(decoderListener);
-            }
-
-            @Override
-            public void onError(int executionError) {
-                alertUser("Error while getting lock to vehicle video stream: " + executionError);
-            }
-
-            @Override
-            public void onTimeout() {
-                alertUser("Timed out while attempting to get lock for vehicle video stream.");
-            }
-
-            @Override
-            public void onAsyncVideoStreamPacketReceived(byte[] data, int dataSize) {
-                mediaCodecManager.onInputDataReceived(data, dataSize);
-            }
-        });
-    }
-
-    private void stopVideoStream() {
-        SoloCameraApi.getApi(drone).stopVideoStream(videoTag, new AbstractCommandListener() {
-            @Override
-            public void onSuccess() {
-                if (stopVideoStream != null)
-                    stopVideoStream.setEnabled(false);
-
-                if (startVideoStream != null)
-                    startVideoStream.setEnabled(true);
-
-                if (stopVideoStreamUsingObserver != null)
-                    stopVideoStreamUsingObserver.setEnabled(false);
-
-                if (startVideoStreamUsingObserver != null)
-                    startVideoStreamUsingObserver.setEnabled(true);
-            }
-
-            @Override
-            public void onError(int executionError) {
-            }
-
-            @Override
-            public void onTimeout() {
-            }
-        });
-    }
-
-    private void stopVideoStreamForObserver() {
-        getApi(drone).stopVideoStream(videoTag);
     }
 
     @Override
@@ -733,8 +419,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
     }
-
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -799,6 +483,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         marker.setMap(naverMap);
     }
 
+    private void setDroneMarkerDefault(){
+        droneMarker.setIcon(OverlayImage.fromResource(R.drawable.ic_stat_notify));
+    }
+
     //TODO 앱 종료됨
     public void makeInfoWindow(String msg, NaverMap targetMap){
         InfoWindow infoWindow = new InfoWindow();
@@ -812,122 +500,3 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         infoWindow.open(targetMap);
     }
 }
-
-/*
-
-final Button takePic = (Button) findViewById(R.id.take_photo_button);
-        takePic.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                takePhoto();
-            }
-        });
-
- final Button toggleVideo = (Button) findViewById(R.id.toggle_video_recording);
-        toggleVideo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleVideoRecording();
-            }
-        });
- startVideoStream = (Button) findViewById(R.id.start_video_stream);
-        startVideoStream.setEnabled(false);
-        startVideoStream.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Starting video stream.");
-                startVideoStream(new Surface(videoView.getSurfaceTexture()));
-            }
-        });
-
-        stopVideoStream = (Button) findViewById(R.id.stop_video_stream);
-        stopVideoStream.setEnabled(false);
-        stopVideoStream.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Stopping video stream.");
-                stopVideoStream();
-            }
-        });
-
-        startVideoStreamUsingObserver = (Button) findViewById(R.id.start_video_stream_using_observer);
-        startVideoStreamUsingObserver.setEnabled(false);
-        startVideoStreamUsingObserver.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Starting video stream using observer for video stream packets.");
-                startVideoStreamForObserver();
-            }
-        });
-
-        stopVideoStreamUsingObserver = (Button) findViewById(R.id.stop_video_stream_using_observer);
-        stopVideoStreamUsingObserver.setEnabled(false);
-        stopVideoStreamUsingObserver.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alertUser("Stopping video stream using observer for video stream packets.");
-                stopVideoStreamForObserver();
-            }
-        });
-
-
-        videoView = (TextureView) findViewById(R.id.video_content);
-        videoView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-                alertUser("Video display is available.");
-                startVideoStream.setEnabled(true);
-                startVideoStreamUsingObserver.setEnabled(true);
-            }
-
-            @Override
-            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-                startVideoStream.setEnabled(false);
-                startVideoStreamUsingObserver.setEnabled(false);
-                return true;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
-            }
-        });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- */
