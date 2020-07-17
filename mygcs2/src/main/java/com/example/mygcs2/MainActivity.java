@@ -27,6 +27,7 @@ import com.naver.maps.map.OnMapReadyCallback;
 import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
 import com.naver.maps.map.overlay.OverlayImage;
+import com.naver.maps.map.overlay.PathOverlay;
 import com.naver.maps.map.overlay.PolylineOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
 import com.naver.maps.map.util.MarkerIcons;
@@ -73,8 +74,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private final Handler handler = new Handler();
 
     private Spinner modeSelector;
-
     private Marker droneMarker = new Marker();
+
+    PathOverlay path = new PathOverlay();
+    List<LatLng> dronePathCoords = new ArrayList<>();
+    private boolean isMapLinked = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -203,6 +208,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             case AttributeEvent.GPS_POSITION:
                 updateDroneMarker();
+                updateDronePath();
                 break;
 
             default:
@@ -392,9 +398,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     protected void updateDroneMarker(){
-        LatLong currentLatlongLocation = getCurrentLocation();
-        LatLng currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
-
+        LatLng currentLatlngLocation = getCurrentLatLng();
         droneMarker.setPosition(currentLatlngLocation);
         droneMarker.setMap(naverMap);
 
@@ -402,9 +406,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.moveCamera(cameraUpdate);
     }
 
-    protected LatLong getCurrentLocation(){
+    protected void updateDronePath(){
+        dronePathCoords.add(getCurrentLatLng());
+        path.setCoords(dronePathCoords);
+    }
+
+    protected LatLong getCurrentLatLong(){
         Gps gps = this.drone.getAttribute(AttributeType.GPS);
         return gps.getPosition();
+    }
+
+    protected LatLng getCurrentLatLng(){
+        LatLong currentLatlongLocation = getCurrentLatLong();
+        LatLng currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
+
+        return currentLatlngLocation;
     }
 
     protected void alertUser(String message) {
@@ -473,6 +489,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void test_btn(View view) {
+
     }
 
     public void btn_hybrid(View view) {
@@ -507,5 +524,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         infoWindow.open(targetMap);
+    }
+
+    public void btnPath(View view) {
+        if(isMapLinked){
+            path.setMap(null);
+            isMapLinked = false;
+        }
+        else{
+            path.setMap(naverMap);
+            isMapLinked = true;
+        }
+    }
+    boolean updatePathBtn(){
+        return true;
     }
 }
