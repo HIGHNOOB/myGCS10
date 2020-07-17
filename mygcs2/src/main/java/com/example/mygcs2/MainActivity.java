@@ -491,6 +491,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void setDroneMarkerDefault(){
         droneMarker.setIcon(OverlayImage.fromResource(R.drawable.birdtopview));
+        droneMarker.setWidth(120);
+        droneMarker.setHeight(120);
+        droneMarker.setFlat(true);
     }
 
     //TODO 앱 종료됨
