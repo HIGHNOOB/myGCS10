@@ -416,9 +416,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return gps.getPosition();
     }
 
+    //TODO gps수신이 불량할 경우 NullPointerException발생, 이경우 default LatLong을 어떻게?? 임시로 (0,0)으로 넣어놓음
     protected LatLng getCurrentLatLng(){
-        LatLong currentLatlongLocation = getCurrentLatLong();
-        LatLng currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
+        LatLng currentLatlngLocation = new LatLng(0,0);
+
+        try {
+            LatLong currentLatlongLocation = getCurrentLatLong();
+            currentLatlngLocation = new LatLng(currentLatlongLocation.getLatitude(),currentLatlongLocation.getLongitude());
+
+        }
+        catch(NullPointerException e) {
+            showMessage("GPS 수신이 불안정 합니다.");
+
+        }
 
         return currentLatlngLocation;
     }
@@ -536,7 +546,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             isMapLinked = true;
         }
     }
+
     boolean updatePathBtn(){
         return true;
     }
+
 }
