@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements DroneListener, To
             }
         });
 
+
         final Button takePic = (Button) findViewById(R.id.take_photo_button);
         takePic.setOnClickListener(new View.OnClickListener() {
             @Override
