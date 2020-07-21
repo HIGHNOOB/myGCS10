@@ -12,6 +12,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
@@ -90,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        hideSystemUI();
 
         final Context context = getApplicationContext();
         this.controlTower = new ControlTower(context);
@@ -542,6 +544,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         infoWindow.open(targetMap);
     }
 
+    //TODO path값이 없을 경우 처리해야 함
     public void btnPath(View view) {
         if(isMapLinked){
             path.setMap(null);
@@ -588,7 +591,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             animButton(altBtnAdd,R.anim.fadeout);
             animButton(altBtnSub,R.anim.fadeout);
             //TODO 버튼상태가 enabled인지 확인할수있는가? 밑에 invisible관련은 필요가없다 왜냐 fadeout하면 어차피 안보인다
-            //TODO 그러나 보이지 않을뿐 클릭이 되기 때문에 enable을 false로 바꿔 주었다.
+            //그러나 보이지 않을뿐 클릭이 되기 때문에 enable을 false로 바꿔 주었다.
             //altBtnAdd.clearAnimation();
             //altBtnSub.clearAnimation();
             altBtnAdd.setVisibility(Button.INVISIBLE);
@@ -609,4 +612,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Animation animation = AnimationUtils.loadAnimation(this,animationType);
         mButton.startAnimation(animation);
     }
+
+    private void hideSystemUI() {
+
+        View decorView = getWindow().getDecorView();
+        decorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        // Set the content to appear under the system bars so that the
+                        // content doesn't resize when the system bars hide and show.
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        // Hide the nav bar and status bar
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+    }
+
 }
