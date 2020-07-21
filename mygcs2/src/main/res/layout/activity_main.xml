@@ -11,8 +11,8 @@
         android:name="com.naver.maps.map.MapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:layout_editor_absoluteX="48dp"
-        tools:layout_editor_absoluteY="-170dp" />
+        tools:layout_editor_absoluteX="40dp"
+        tools:layout_editor_absoluteY="38dp" />
 
     <Button
         android:id="@+id/btnConnect"
@@ -146,6 +146,7 @@
         app:layout_constraintVertical_bias="0.95" />
 
     <LinearLayout
+        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="20dp"
         android:background="#80000000"
@@ -158,12 +159,12 @@
 
         <TextView
             android:id="@+id/batteryBalueTextView"
-            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="전압" />
+            android:text="전압"
+            android:textColor="#FFFFFF" />
 
         <Spinner
             android:id="@+id/modeSelect"
@@ -173,40 +174,50 @@
 
         <TextView
             android:id="@+id/altitudeValueTextView"
-            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="고도" />
+            android:text="고도"
+            android:textColor="#FFFFFF" />
 
         <TextView
             android:id="@+id/speedValueTextView"
-            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="속도" />
+            android:text="속도"
+            android:textColor="#FFFFFF" />
 
         <TextView
             android:id="@+id/YAWTextView"
-            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="YAW" />
+            android:text="YAW"
+            android:textColor="#FFFFFF" />
 
         <TextView
             android:id="@+id/satelliteTextView"
-            android:textColor="#FFFFFF"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="위성" />
+            android:text="위성"
+            android:textColor="#FFFFFF" />
 
     </LinearLayout>
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/my_recycler_view"
+        android:layout_width="238dp"
+        android:layout_height="198dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="40dp"
+        android:scrollbars="vertical"
+        app:layout_constraintStart_toStartOf="@+id/map"
+        app:layout_constraintTop_toTopOf="@+id/linearLayout" />
 
 </android.support.constraint.ConstraintLayout>
