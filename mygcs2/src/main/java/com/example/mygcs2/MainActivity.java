@@ -1,5 +1,7 @@
 package com.example.mygcs2;
 
+import android.animation.AnimatorInflater;
+import android.animation.AnimatorSet;
 import android.content.Context;
 import android.graphics.PointF;
 import android.location.Location;
@@ -10,6 +12,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -80,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     List<LatLng> dronePathCoords = new ArrayList<>();
     private boolean isMapLinked = false;
 
+    private double droneMissionAlt = 10;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -283,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
         } else if (vehicleState.isArmed()) {
             // Take off
-            ControlApi.getApi(this.drone).takeoff(10, new AbstractCommandListener() {
+            ControlApi.getApi(this.drone).takeoff(droneMissionAlt, new AbstractCommandListener() {
 
                 @Override
                 public void onSuccess() {
@@ -517,9 +522,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setDroneMarkerDefault(){
-        droneMarker.setIcon(OverlayImage.fromResource(R.drawable.birdtopview));
-        droneMarker.setWidth(120);
-        droneMarker.setHeight(120);
+        droneMarker.setIcon(OverlayImage.fromResource(R.drawable.dronearrow));
+        droneMarker.setAnchor(new PointF((float)0.5, (float) 0.5));
+        droneMarker.setWidth(100);
+        droneMarker.setHeight(330);
         droneMarker.setFlat(true);
     }
 
@@ -551,4 +557,56 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
+    public void btnAlt(View view) {
+        toggleAltBtnView();
+    }
+
+    public void btnAltSub(View view) {
+        droneMissionAlt -= 0.5;
+        updateAltBtnVal();
+
+    }
+
+    public void btnAltAdd(View view) {
+        droneMissionAlt += 0.5;
+        updateAltBtnVal();
+    }
+
+    void toggleAltBtnView(){
+        Button altBtnAdd = (Button)findViewById(R.id.btn_current_mission_alt_add);
+        Button altBtnSub = (Button)findViewById(R.id.btn_current_mission_alt_sub);
+
+        if(altBtnAdd.getVisibility()==Button.INVISIBLE){
+            altBtnAdd.setEnabled(true);
+            altBtnSub.setEnabled(true);
+            altBtnAdd.setVisibility(Button.VISIBLE);
+            altBtnSub.setVisibility(Button.VISIBLE);
+            animButton(altBtnAdd,R.anim.bounce);
+            animButton(altBtnSub,R.anim.bounce);
+        }
+        else{
+            animButton(altBtnAdd,R.anim.fadeout);
+            animButton(altBtnSub,R.anim.fadeout);
+            //TODO 버튼상태가 enabled인지 확인할수있는가? 밑에 invisible관련은 필요가없다 왜냐 fadeout하면 어차피 안보인다
+            //TODO 그러나 보이지 않을뿐 클릭이 되기 때문에 enable을 false로 바꿔 주었다.
+            //altBtnAdd.clearAnimation();
+            //altBtnSub.clearAnimation();
+            altBtnAdd.setVisibility(Button.INVISIBLE);
+            altBtnSub.setVisibility(Button.INVISIBLE);
+            altBtnAdd.setEnabled(false);
+            altBtnSub.setEnabled(false);
+        }
+    }
+
+    void updateAltBtnVal(){
+        Button altBtn = (Button)findViewById(R.id.btn_current_mission_alt);
+        altBtn.setText(String.format("지령 고도 = %.1fm", droneMissionAlt));
+    }
+
+    void animButton(Button button, int animationType){
+        Button mButton = button;
+        //Animation animation = AnimationUtils.loadAnimation(this,R.anim.bounce);
+        Animation animation = AnimationUtils.loadAnimation(this,animationType);
+        mButton.startAnimation(animation);
+    }
 }
