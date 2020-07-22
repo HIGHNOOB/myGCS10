@@ -211,7 +211,7 @@
     </LinearLayout>
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/my_recycler_view"
+        android:id="@+id/recyclerView"
         android:layout_width="238dp"
         android:layout_height="198dp"
         android:layout_marginStart="16dp"

@@ -10,6 +10,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -63,6 +65,7 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import org.droidplanner.services.android.impl.core.drone.variables.Camera;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,6 +89,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean isMapLinked = false;
 
     private double droneMissionAlt = 10;
+
+    ArrayList<String> recycler_list = new ArrayList<>(); // 리사이클러뷰
+    List<LocalTime> recycler_time = new ArrayList<>(); // 리사이클러뷰 시간
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,6 +128,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 new FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE);
 
         setDroneMarkerDefault();
+    }
+
+    public void test_btn(View view) {
+        alertUser2("하이요");
+
+    }
+
+    private void alertUser2(String message) {
+
+        recycler_list.add(String.format("★" + message));
+
+        // 리사이클러뷰에 LinearLayoutManager 객체 지정.
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        recyclerView.scrollToPosition(RecyclerView.SCROLL_INDICATOR_BOTTOM);
+
+        // 리사이클러뷰에 SimpleAdapter 객체 지정.
+        SimpleTextAdapter adapter = new SimpleTextAdapter(recycler_list);
+        recyclerView.setAdapter(adapter);
+
+
     }
 
     @Override
@@ -503,10 +531,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void showMessage(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-    }
-
-    public void test_btn(View view) {
-
     }
 
     public void btn_hybrid(View view) {
