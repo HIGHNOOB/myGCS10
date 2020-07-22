@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     ArrayList<String> recycler_list = new ArrayList<>(); // 리사이클러뷰
     List<LocalTime> recycler_time = new ArrayList<>(); // 리사이클러뷰 시간
+    int testCount = 0; //TODO 지우셈
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void test_btn(View view) {
-        alertUser2("하이요");
+        alertUser2(String.format("%d 하이요",testCount++));
 
     }
 
@@ -143,12 +144,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        recyclerView.scrollToPosition(RecyclerView.SCROLL_INDICATOR_BOTTOM);
-
         // 리사이클러뷰에 SimpleAdapter 객체 지정.
         SimpleTextAdapter adapter = new SimpleTextAdapter(recycler_list);
         recyclerView.setAdapter(adapter);
 
+        //recyclerView.scrollToPosition(RecyclerView.SCROLL_INDICATOR_BOTTOM);
+        recyclerView.scrollToPosition(recycler_list.size()-1);
 
     }
 
