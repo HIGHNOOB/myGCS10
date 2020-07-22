@@ -128,18 +128,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationSource =
                 new FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE);
 
-        setDroneMarkerDefault();
+        initLayout();
     }
 
     public void test_btn(View view) {
-        alertUser2(String.format("%d 하이요",testCount++));
+        sendRecyclerMessage(String.format("%d 하이요",testCount++));
 
     }
 
-    private void alertUser2(String message) {
+    public void test_btn2(View view) {
+        clearRecyclerMessage();
+    }
 
+    private void sendRecyclerMessage(String message) {
         recycler_list.add(String.format("★~" + message));
+        refreshRecyclerView();
 
+    }
+
+    private void clearRecyclerMessage(){
+        recycler_list.clear();
+        refreshRecyclerView();
+    }
+
+    private void refreshRecyclerView() {
         // 리사이클러뷰에 LinearLayoutManager 객체 지정.
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -148,8 +160,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         SimpleTextAdapter adapter = new SimpleTextAdapter(recycler_list);
         recyclerView.setAdapter(adapter);
 
-        //recyclerView.scrollToPosition(RecyclerView.SCROLL_INDICATOR_BOTTOM);
         recyclerView.scrollToPosition(recycler_list.size()-1);
+        //recyclerView.smoothScrollToPosition(recycler_list.size()-1);
 
     }
 
@@ -548,7 +560,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         marker.setMap(naverMap);
     }
 
-    private void setDroneMarkerDefault(){
+    public void initLayout(){
+        initAltitudeButton();
+        initDroneMarker();
+    }
+
+    public void initAltitudeButton(){
+        Button altBtnAdd = findViewById(R.id.btn_current_mission_alt_add);
+        Button altBtnSub = findViewById(R.id.btn_current_mission_alt_sub);
+
+        altBtnAdd.setVisibility(Button.INVISIBLE);
+        altBtnSub.setVisibility(Button.INVISIBLE);
+    }
+
+    private void initDroneMarker(){
         droneMarker.setIcon(OverlayImage.fromResource(R.drawable.dronearrow));
         droneMarker.setAnchor(new PointF((float)0.5, (float) 0.5));
         droneMarker.setWidth(100);
