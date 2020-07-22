@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void alertUser2(String message) {
 
-        recycler_list.add(String.format("★" + message));
+        recycler_list.add(String.format("★~" + message));
 
         // 리사이클러뷰에 LinearLayoutManager 객체 지정.
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
