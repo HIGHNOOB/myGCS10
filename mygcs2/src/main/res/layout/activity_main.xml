@@ -54,17 +54,17 @@
         app:layout_constraintVertical_bias="0.889" />
 
     <Button
-        android:id="@+id/btn_test2"
+        android:id="@+id/btn_clear_recycle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:onClick="test_btn2"
-        android:text="테스트용2"
+        android:onClick="btnclearRecycler"
+        android:text="clear"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.519"
+        app:layout_constraintHorizontal_bias="0.01"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.738" />
+        app:layout_constraintVertical_bias="0.55" />
 
     <Button
         android:id="@+id/but_path"
@@ -225,8 +225,8 @@
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recyclerView"
-        android:layout_width="238dp"
-        android:layout_height="198dp"
+        android:layout_width="180dp"
+        android:layout_height="150dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="40dp"
         android:scrollbars="vertical"
