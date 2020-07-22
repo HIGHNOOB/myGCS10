@@ -3,7 +3,11 @@ package com.example.mygcs2;
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.PointF;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.location.Location;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -74,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
     private FusedLocationSource locationSource;
     private NaverMap naverMap;
+    private int DEFAULT_ZOOM_LEVEL = 17;
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private Drone drone;
@@ -132,11 +137,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void test_btn(View view) {
-        sendRecyclerMessage(String.format("%d 하이요",testCount++));
+        sendRecyclerMessage(String.format("%d 굉장히엄청나게대단하게심각하게긴텍스트",testCount++));
+
 
     }
 
-    public void test_btn2(View view) {
+    public void btnclearRecycler(View view) {
         clearRecyclerMessage();
     }
 
@@ -146,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    private void clearRecyclerMessage(){
+    public void clearRecyclerMessage(){
         recycler_list.clear();
         refreshRecyclerView();
     }
@@ -162,7 +168,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         recyclerView.scrollToPosition(recycler_list.size()-1);
         //recyclerView.smoothScrollToPosition(recycler_list.size()-1);
-
     }
 
     @Override
@@ -540,6 +545,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showMessage(location.getLatitude() + ", " + location.getLongitude());
             }
         });
+
+        initMap();
     }
 
     private void showMessage(String msg) {
@@ -563,6 +570,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void initLayout(){
         initAltitudeButton();
         initDroneMarker();
+    }
+
+    public void initMap(){
+        LatLng latLng = new LatLng(35.9436,126.6842);
+        naverMap.setCameraPosition(new CameraPosition(latLng,DEFAULT_ZOOM_LEVEL));
     }
 
     public void initAltitudeButton(){
