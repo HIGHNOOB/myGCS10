@@ -3,6 +3,7 @@ package com.example.mygcs2;
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorSet;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
@@ -12,11 +13,13 @@ import android.location.Location;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
@@ -35,6 +38,7 @@ import com.naver.maps.map.LocationTrackingMode;
 import com.naver.maps.map.MapFragment;
 import com.naver.maps.map.NaverMap;
 import com.naver.maps.map.OnMapReadyCallback;
+import com.naver.maps.map.UiSettings;
 import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
 import com.naver.maps.map.overlay.OverlayImage;
@@ -79,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationSource locationSource;
     private NaverMap naverMap;
     private int DEFAULT_ZOOM_LEVEL = 17;
+    LatLng DEFAULT_LATLNG = new LatLng(35.9436,126.6842);
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private Drone drone;
@@ -88,6 +93,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private Spinner modeSelector;
     private Marker droneMarker = new Marker();
+    List<Marker> goalMarkers = new ArrayList<>();
+    Marker marker_goal = new Marker(); // Guided 모드 마커
+    private int Guided_Count = 0;
 
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
@@ -95,8 +103,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private double droneMissionAlt = 10;
 
-    ArrayList<String> recycler_list = new ArrayList<>(); // 리사이클러뷰
-    List<LocalTime> recycler_time = new ArrayList<>(); // 리사이클러뷰 시간
+    ArrayList<String> recycler_list = new ArrayList<>();
     int testCount = 0; //TODO 지우셈
 
     @Override
@@ -459,6 +466,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.moveCamera(cameraUpdate);
     }
 
+
+
     protected void updateDronePath(){
         dronePathCoords.add(getCurrentLatLng());
         path.setCoords(dronePathCoords);
@@ -523,13 +532,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull NaverMap naverMap) {
         this.naverMap = naverMap;
         naverMap.setLocationSource(locationSource);
-        naverMap.getUiSettings().setZoomControlEnabled(false);
 
         naverMap.setOnMapClickListener(new NaverMap.OnMapClickListener() {
             @Override
             public void onMapClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
                 makeMarker(naverMap,latLng);
-                //makeInfoWindow("test",naverMap);
             }
         });
 
@@ -546,7 +553,89 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        // 롱 클릭 시 경고창
+        naverMap.setOnMapLongClickListener(new NaverMap.OnMapLongClickListener() {
+                                               @Override
+                                               public void onMapLongClick(@NonNull PointF pointF, @NonNull LatLng coord) {
+                                                   LongClickWarning(pointF, coord);
+                                               }
+                                           });
+
         initMap();
+    }
+
+    private void LongClickWarning(@NonNull PointF pointF, @NonNull final LatLng coord) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("가이드 모드");
+        builder.setMessage("클릭한 지점으로 이동하게 됩니다. 이동하시겠습니까?");
+        builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // 도착지 마커 생성
+                marker_goal.setMap(null);
+                marker_goal.setPosition(new LatLng(coord.latitude, coord.longitude));
+                marker_goal.setIcon(MarkerIcons.RED);
+                marker_goal.setWidth(70);
+                marker_goal.setHeight(70);
+                marker_goal.setMap(naverMap);
+
+                Guided_Count = 0;
+
+                // Guided 모드로 변환
+                ChangeToGuidedMode();
+
+                // 지정된 위치로 이동
+                GotoTartget();
+            }
+        });
+        builder.setNegativeButton("아니오", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+
+            }
+        });
+        builder.show();
+
+    }
+    private void ChangeToGuidedMode() {
+        VehicleApi.getApi(this.drone).setVehicleMode(VehicleMode.COPTER_GUIDED, new SimpleCommandListener() {
+            @Override
+            public void onSuccess() {
+                alertUser("가이드 모드로 변경 중...");
+            }
+
+            @Override
+            public void onError(int executionError) {
+                alertUser("가이드 모드 변경 실패 : " + executionError);
+            }
+
+            @Override
+            public void onTimeout() {
+                alertUser("가이드 모드 변경 실패.");
+            }
+        });
+    }
+
+    private void GotoTartget() {
+        ControlApi.getApi(this.drone).goTo(
+                new LatLong(marker_goal.getPosition().latitude, marker_goal.getPosition().longitude),
+                true, new AbstractCommandListener() {
+                    @Override
+                    public void onSuccess() {
+                        alertUser("목적지로 향합니다.");
+                    }
+
+                    @Override
+                    public void onError(int executionError) {
+                        alertUser("이동 할 수 없습니다 : " + executionError);
+                    }
+
+                    @Override
+                    public void onTimeout() {
+                        alertUser("이동 할 수 없습니다.");
+                    }
+                });
     }
 
     private void showMessage(String msg) {
@@ -573,8 +662,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void initMap(){
-        LatLng latLng = new LatLng(35.9436,126.6842);
-        naverMap.setCameraPosition(new CameraPosition(latLng,DEFAULT_ZOOM_LEVEL));
+
+        UiSettings uiSettings = naverMap.getUiSettings();
+        uiSettings.setCompassEnabled(false);
+        uiSettings.setScaleBarEnabled(false);
+        uiSettings.setZoomControlEnabled(false);
+
+        naverMap.setCameraPosition(new CameraPosition(DEFAULT_LATLNG, DEFAULT_ZOOM_LEVEL));
+        naverMap.setMapType((NaverMap.MapType.Satellite));
     }
 
     public void initAltitudeButton(){
@@ -690,4 +785,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
+    public void click_layout(View view) {
+        hideSystemUI();
+        Log.d("t123","mapClick");
+    }
 }
