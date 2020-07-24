@@ -565,7 +565,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void LongClickWarning(@NonNull PointF pointF, @NonNull final LatLng coord) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        MyAlertDialog builder = new MyAlertDialog(this);
         builder.setTitle("가이드 모드");
         builder.setMessage("클릭한 지점으로 이동하게 됩니다. 이동하시겠습니까?");
         builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
@@ -574,7 +574,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // 도착지 마커 생성
                 marker_goal.setMap(null);
                 marker_goal.setPosition(new LatLng(coord.latitude, coord.longitude));
-                marker_goal.setIcon(MarkerIcons.RED);
+                marker_goal.setIcon(OverlayImage.fromResource(R.drawable.target));
+                marker_goal.setAnchor(new PointF(0.5f,0.5f));
                 marker_goal.setWidth(70);
                 marker_goal.setHeight(70);
                 marker_goal.setMap(naverMap);
@@ -682,7 +683,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void initDroneMarker(){
         droneMarker.setIcon(OverlayImage.fromResource(R.drawable.dronearrow));
-        droneMarker.setAnchor(new PointF((float)0.5, (float) 0.5));
+        droneMarker.setAnchor(new PointF(0.5f, 0.5f));
         droneMarker.setWidth(100);
         droneMarker.setHeight(330);
         droneMarker.setFlat(true);
@@ -770,7 +771,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mButton.startAnimation(animation);
     }
 
-    private void hideSystemUI() {
+    public void hideSystemUI() {
 
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
