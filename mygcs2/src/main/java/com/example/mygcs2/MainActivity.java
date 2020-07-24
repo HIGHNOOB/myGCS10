@@ -272,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
 
             default:
-                hideSystemUI();
+                // Log.i("DRONE_EVENT", event); //Uncomment to see events from the drone
                 break;
         }
     }
@@ -565,7 +565,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void LongClickWarning(@NonNull PointF pointF, @NonNull final LatLng coord) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        MyAlertDialog builder = new MyAlertDialog(this);
         builder.setTitle("가이드 모드");
         builder.setMessage("클릭한 지점으로 이동하게 됩니다. 이동하시겠습니까?");
         builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
@@ -786,4 +786,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
+    public void click_layout(View view) {
+        hideSystemUI();
+        Log.d("t123","mapClick");
+    }
 }
