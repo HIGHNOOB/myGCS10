@@ -73,7 +73,9 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import org.droidplanner.services.android.impl.core.drone.variables.Camera;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,10 +103,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     List<LatLng> dronePathCoords = new ArrayList<>();
     private boolean isMapLinked = false;
 
-    private double droneMissionAlt = 10;
+    private double droneMissionAlt = 1;
 
     ArrayList<String> recycler_list = new ArrayList<>();
-    int testCount = 0; //TODO 지우셈
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,11 +122,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 onFlightModeSelected(view);
+                hideSystemUI();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
+                hideSystemUI();
             }
         });
 
@@ -144,9 +146,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void test_btn(View view) {
-        sendRecyclerMessage(String.format("%d 굉장히엄청나게대단하게심각하게긴텍스트",testCount++));
-
-
+        sendRecyclerMessage(String.format("~~~~~~아주~~~~~~~~~~~~긴~~~~~~~~~~~~~메세지~~~~~~~~"));
     }
 
     public void btnclearRecycler(View view) {
@@ -154,7 +154,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void sendRecyclerMessage(String message) {
-        recycler_list.add(String.format("★~" + message));
+        String localTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        recycler_list.add(String.format("[" + localTime + "]" + message));
         refreshRecyclerView();
 
     }
@@ -498,6 +499,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void alertUser(String message) {
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
         Log.d(TAG, message);
+        sendRecyclerMessage(message);
     }
 
     @Override
@@ -660,6 +662,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void initLayout(){
         initAltitudeButton();
         initDroneMarker();
+        updateAltBtnVal();
     }
 
     public void initMap(){
@@ -772,18 +775,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void hideSystemUI() {
-
-        View decorView = getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        // Set the content to appear under the system bars so that the
-                        // content doesn't resize when the system bars hide and show.
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        // Hide the nav bar and status bar
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+        //hide navigationbar
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                View decorView = getWindow().getDecorView();
+                decorView.setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                // Set the content to appear under the system bars so that the
+                                // content doesn't resize when the system bars hide and show.
+                                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                // Hide the nav bar and status bar
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_FULLSCREEN);
+            }
+        }, 100);
     }
 
     public void click_layout(View view) {
