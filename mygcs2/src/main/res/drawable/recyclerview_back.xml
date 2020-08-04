@@ -3,8 +3,16 @@
     <!-- 평상시 -->
     <item android:state_focused="false" android:state_pressed="false">
         <shape>
+            <stroke
+                android:width="1dp"
+                android:color="#FF000000"
+                android:dashWidth="1dp"
+                android:dashGap="2dp" />
+
             <solid android:color="#8018FFFF" />
             <corners android:radius="10dp" />
         </shape>
+
+
     </item>
 </selector>
