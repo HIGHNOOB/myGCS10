@@ -21,13 +21,7 @@ public class MyAlertDialog extends AlertDialog.Builder {
         AlertDialog dialog = this.create();
         super.show();
 
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                mMainActivity.hideSystemUI();
-            }
-        }, 1000);
+        mMainActivity.hideSystemUI();
 
 
         return dialog;
