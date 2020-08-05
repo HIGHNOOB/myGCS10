@@ -55,6 +55,7 @@ import com.o3dr.android.client.interfaces.LinkListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
+import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloAttributes;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloState;
@@ -272,8 +273,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 updateDronePath();
                 break;
 
+            case AttributeEvent.AUTOPILOT_MESSAGE:
+                Bundle bundle = extras;
+                String msg = extras.getString("com.o3dr.services.android.lib.attribute.event.extra.AUTOPILOT_MESSAGE");
+                alertUser("[AUTOPILOT_MESSAGE]" + msg);
+                break;
+
             default:
-                // Log.i("DRONE_EVENT", event); //Uncomment to see events from the drone
                 break;
         }
     }
