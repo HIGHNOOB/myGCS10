@@ -1,35 +1,25 @@
 package com.example.mygcs2;
 
-import android.animation.AnimatorInflater;
-import android.animation.AnimatorSet;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Color;
 import android.graphics.PointF;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.location.Location;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.naver.maps.geometry.LatLng;
 import com.naver.maps.map.CameraPosition;
@@ -43,9 +33,7 @@ import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
 import com.naver.maps.map.overlay.OverlayImage;
 import com.naver.maps.map.overlay.PathOverlay;
-import com.naver.maps.map.overlay.PolylineOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
-import com.naver.maps.map.util.MarkerIcons;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.ControlApi;
@@ -55,7 +43,6 @@ import com.o3dr.android.client.interfaces.LinkListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
-import com.o3dr.services.android.lib.drone.attribute.AttributeEventExtra;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloAttributes;
 import com.o3dr.services.android.lib.drone.companion.solo.SoloState;
@@ -72,10 +59,7 @@ import com.o3dr.services.android.lib.gcs.link.LinkConnectionStatus;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
-import org.droidplanner.services.android.impl.core.drone.variables.Camera;
-
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
     private boolean isMapLinked = false;
+    private boolean isCameraLocked = true;
 
     private double droneMissionAlt = 1;
 
@@ -158,7 +143,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         String localTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         recycler_list.add(String.format("[" + localTime + "]" + message));
         refreshRecyclerView();
-
     }
 
     public void clearRecyclerMessage(){
@@ -469,8 +453,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         droneMarker.setPosition(currentLatlngLocation);
         droneMarker.setMap(naverMap);
 
-        CameraUpdate cameraUpdate = CameraUpdate.scrollTo(currentLatlngLocation);
-        naverMap.moveCamera(cameraUpdate);
+        if(isCameraLocked){
+            CameraUpdate cameraUpdate = CameraUpdate.scrollTo(currentLatlngLocation);
+            naverMap.moveCamera(cameraUpdate);
+        }
     }
 
 
@@ -495,7 +481,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         }
         catch(NullPointerException e) {
-            showMessage("GPS 수신이 불안정 합니다.");
+            sendRecyclerMessage("GPS 수신이 불안정 합니다.");
 
         }
 
@@ -503,8 +489,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     protected void alertUser(String message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-        Log.d(TAG, message);
         sendRecyclerMessage(message);
     }
 
@@ -557,7 +541,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.addOnLocationChangeListener(new NaverMap.OnLocationChangeListener() {
             @Override
             public void onLocationChange(@NonNull Location location) {
-                showMessage(location.getLatitude() + ", " + location.getLongitude());
+                sendRecyclerMessage(location.getLatitude() + ", " + location.getLongitude());
             }
         });
 
@@ -645,10 +629,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         alertUser("이동 할 수 없습니다.");
                     }
                 });
-    }
-
-    private void showMessage(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     public void btn_hybrid(View view) {
@@ -801,8 +781,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }, 100);
     }
 
-    public void click_layout(View view) {
-        hideSystemUI();
-        Log.d("t123","mapClick");
+    public void toggleCameraLock(View view) {
+        ImageButton imageButton = (ImageButton)findViewById(R.id.btn_lock_camera);
+
+        if(isCameraLocked){
+            imageButton.setImageResource(R.drawable.unlockedpadlock);
+            sendRecyclerMessage("지도 잠금 해제");
+            isCameraLocked = false;
+        }
+        else {
+            imageButton.setImageResource(R.drawable.lockedpadlock);
+            sendRecyclerMessage("지도 잠금");
+            isCameraLocked = true;
+        }
     }
 }
