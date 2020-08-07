@@ -59,6 +59,8 @@ import com.o3dr.services.android.lib.gcs.link.LinkConnectionStatus;
 import com.o3dr.services.android.lib.model.AbstractCommandListener;
 import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
+import org.droidplanner.services.android.impl.core.polygon.Polygon;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -82,12 +84,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Marker droneMarker = new Marker();
     List<Marker> goalMarkers = new ArrayList<>();
     Marker marker_goal = new Marker(); // Guided 모드 마커
-    private int Guided_Count = 0;
 
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
     private boolean isMapLinked = false;
     private boolean isCameraLocked = true;
+    private boolean isPolygonMissionEnabled = false;
 
     private double droneMissionAlt = 1;
 
@@ -528,6 +530,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.setOnMapClickListener(new NaverMap.OnMapClickListener() {
             @Override
             public void onMapClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
+                if(isPolygonMissionEnabled) {
+                    //todo 폴리곤 그리자
+
+                }
                 makeMarker(naverMap,latLng);
             }
         });
@@ -572,8 +578,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 marker_goal.setHeight(70);
                 marker_goal.setMap(naverMap);
 
-                Guided_Count = 0;
-
                 // Guided 모드로 변환
                 ChangeToGuidedMode();
 
@@ -614,6 +618,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ControlApi.getApi(this.drone).goTo(
                 new LatLong(marker_goal.getPosition().latitude, marker_goal.getPosition().longitude),
                 true, new AbstractCommandListener() {
+                    @Override
+                    public void onSuccess() {
+                        alertUser("목적지로 향합니다.");
+                    }
+
+                    @Override
+                    public void onError(int executionError) {
+                        alertUser("이동 할 수 없습니다 : " + executionError);
+                    }
+
+                    @Override
+                    public void onTimeout() {
+                        alertUser("이동 할 수 없습니다.");
+                    }
+                });
+    }
+
+    private void GotoTartget(LatLong latLong) {
+        ControlApi.getApi(this.drone).goTo(latLong,true, new AbstractCommandListener() {
                     @Override
                     public void onSuccess() {
                         alertUser("목적지로 향합니다.");
@@ -678,19 +701,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         droneMarker.setFlat(true);
     }
 
-    //TODO 앱 종료됨
-    public void makeInfoWindow(String msg, NaverMap targetMap){
-        InfoWindow infoWindow = new InfoWindow();
-        infoWindow.setAdapter(new InfoWindow.DefaultTextAdapter(getBaseContext()) {
-            @NonNull
-            @Override
-            public CharSequence getText(@NonNull InfoWindow infoWindow) {
-                return msg;
-            }
-        });
-        infoWindow.open(targetMap);
-    }
-
     //TODO path값이 없을 경우 처리해야 함
     public void btnPath(View view) {
         if(isMapLinked){
@@ -701,10 +711,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             path.setMap(naverMap);
             isMapLinked = true;
         }
-    }
-
-    boolean updatePathBtn(){
-        return true;
     }
 
     public void btnAlt(View view) {
@@ -794,5 +800,53 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             sendRecyclerMessage("지도 잠금");
             isCameraLocked = true;
         }
+    }
+
+    public void btnMissionAB(View view) {
+        //todo goto뒤에 latlng좌표 줘야함
+        /*
+        ControlApi.getApi(this.drone).goTo(, true, new AbstractCommandListener() {
+            @Override
+            public void onSuccess() {
+
+            }
+
+            @Override
+            public void onError(int executionError) {
+
+            }
+
+            @Override
+            public void onTimeout() {
+
+            }
+        });
+
+
+        ControlApi.getApi(this.drone).goTo(
+                new LatLong(marker_goal.getPosition().latitude, marker_goal.getPosition().longitude),
+                true, new AbstractCommandListener() {
+                    @Override
+                    public void onSuccess() {
+                        alertUser("목적지로 향합니다.");
+                    }
+
+                    @Override
+                    public void onError(int executionError) {
+                        alertUser("이동 할 수 없습니다 : " + executionError);
+                    }
+
+                    @Override
+                    public void onTimeout() {
+                        alertUser("이동 할 수 없습니다.");
+                    }
+                });
+
+         */
+    }
+
+    public void btnMissionPoly(View view) {
+        isPolygonMissionEnabled = true;
+        sendRecyclerMessage("(임시) 다각형비행 마커선택모드 on");
     }
 }
