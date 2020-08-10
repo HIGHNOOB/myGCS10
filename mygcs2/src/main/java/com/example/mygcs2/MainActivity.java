@@ -2,6 +2,7 @@ package com.example.mygcs2;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
 import android.os.Handler;
@@ -33,6 +34,7 @@ import com.naver.maps.map.overlay.InfoWindow;
 import com.naver.maps.map.overlay.Marker;
 import com.naver.maps.map.overlay.OverlayImage;
 import com.naver.maps.map.overlay.PathOverlay;
+import com.naver.maps.map.overlay.PolygonOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
@@ -64,7 +66,12 @@ import org.droidplanner.services.android.impl.core.polygon.Polygon;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+
+import static com.example.mygcs2.Values.*;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         DroneListener, TowerListener, LinkListener {
@@ -82,8 +89,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private Spinner modeSelector;
     private Marker droneMarker = new Marker();
-    List<Marker> goalMarkers = new ArrayList<>();
+    List<Marker> polyMarkers = new ArrayList<>();
+    List<LatLng> polyMarkersLatLng = new ArrayList<>();
+    ArrayList<PointF> polyPointFs = new ArrayList<>();
+    PolygonOverlay polygon = new PolygonOverlay();
     Marker marker_goal = new Marker(); // Guided 모드 마커
+    int testCount = 0;
 
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
@@ -531,10 +542,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onMapClick(@NonNull PointF pointF, @NonNull LatLng latLng) {
                 if(isPolygonMissionEnabled) {
-                    //todo 폴리곤 그리자
-
+                    makePolygon(latLng);
                 }
-                makeMarker(naverMap,latLng);
             }
         });
 
@@ -551,7 +560,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
-        // 롱 클릭 시 경고창
         naverMap.setOnMapLongClickListener(new NaverMap.OnMapLongClickListener() {
                                                @Override
                                                public void onMapLongClick(@NonNull PointF pointF, @NonNull LatLng coord) {
@@ -561,6 +569,74 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         initMap();
     }
+
+    public void makePolygon(LatLng latLng){
+        Marker marker = new Marker(latLng);
+        marker.setMap(naverMap);
+        polyMarkers.add(marker);
+        polyPointFs.add(new PointF((float)latLng.latitude,(float)latLng.longitude));
+
+        if(polyMarkers.size()>= 3){
+            //TODO latlng sort해야함
+            polygon.setMap(naverMap);
+        }
+        sendRecyclerMessage(String.format("%d",polyMarkers.size()));
+    }
+
+    public static void sortPointsClockwise(ArrayList<PointF> points) {
+        float averageX = 0;
+        float averageY = 0;
+
+        for (PointF point : points) {
+            averageX += point.x;
+            averageY += point.y;
+        }
+
+        final float finalAverageX = averageX / points.size();
+        final float finalAverageY = averageY / points.size();
+
+        Comparator<PointF> comparator = new Comparator<PointF>() {
+            public int compare(PointF lhs, PointF rhs) {
+                double lhsAngle = Math.atan2(lhs.y - finalAverageY, lhs.x - finalAverageX);
+                double rhsAngle = Math.atan2(rhs.y - finalAverageY, rhs.x - finalAverageX);
+
+                // Depending on the coordinate system, you might need to reverse these two conditions
+                if (lhsAngle < rhsAngle) return -1;
+                if (lhsAngle > rhsAngle) return 1;
+
+                return 0;
+            }
+        };
+
+        Collections.sort(points, comparator);
+    }
+    public static void sortLatLngClockwise(ArrayList<LatLng> latlngs) {
+        float averageX = 0;
+        float averageY = 0;
+
+        for (LatLng latLng : latlngs) {
+            averageX += latLng.latitude;
+            averageY += latLng.longitude;
+        }
+
+        final float finalAverageX = averageX / latlngs.size();
+        final float finalAverageY = averageY / latlngs.size();
+
+        Comparator<LatLng> comparator = (lhs, rhs) -> {
+            double lhsAngle = Math.atan2(lhs.longitude - finalAverageY, lhs.latitude - finalAverageX);
+            double rhsAngle = Math.atan2(rhs.longitude - finalAverageY, rhs.latitude - finalAverageX);
+
+            // Depending on the coordinate system, you might need to reverse these two conditions
+            if (lhsAngle < rhsAngle) return -1;
+            if (lhsAngle > rhsAngle) return 1;
+
+            return 0;
+        };
+
+        Collections.sort(latlngs, comparator);
+    }
+
+
 
     private void LongClickWarning(@NonNull PointF pointF, @NonNull final LatLng coord) {
         MyAlertDialog builder = new MyAlertDialog(this);
@@ -662,12 +738,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         naverMap.setMapType(NaverMap.MapType.Basic);
     }
 
-    private void makeMarker(@NonNull NaverMap naverMap, @NonNull LatLng latLng){
-        Marker marker = new Marker();
-        marker.setPosition(latLng);
-        marker.setMap(naverMap);
-    }
-
     public void initLayout(){
         initAltitudeButton();
         initDroneMarker();
@@ -683,6 +753,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         naverMap.setCameraPosition(new CameraPosition(DEFAULT_LATLNG, DEFAULT_ZOOM_LEVEL));
         naverMap.setMapType((NaverMap.MapType.Satellite));
+
+        polygon.setColor(POLYGON_COLOR);
+        polygon.setOutlineColor(POLYGON_OUTLINE_COLOR);
+        polygon.setOutlineWidth(POLYGON_OUTLINE_WIDTH);
+
     }
 
     public void initAltitudeButton(){
@@ -848,5 +923,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void btnMissionPoly(View view) {
         isPolygonMissionEnabled = true;
         sendRecyclerMessage("(임시) 다각형비행 마커선택모드 on");
+    }
+
+    public void clear_overlay(View view) {
+        polyMarkersLatLng.clear();
+        polygon.setMap(null);
+        for(Marker marker : polyMarkers){
+            marker.setMap(null);
+            sendRecyclerMessage(String.format("%d",testCount));
+            testCount++;
+        }
+
+        polyMarkers.clear();
+
     }
 }
