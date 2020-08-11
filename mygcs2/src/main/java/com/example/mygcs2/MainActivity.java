@@ -23,6 +23,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.naver.maps.geometry.LatLng;
+import com.naver.maps.geometry.LatLngBounds;
 import com.naver.maps.map.CameraPosition;
 import com.naver.maps.map.CameraUpdate;
 import com.naver.maps.map.LocationTrackingMode;
@@ -569,6 +570,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         initMap();
     }
+    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle){
+        LatLng latLngNE = polygon.getBounds().getNorthEast();
+        LatLng latLngSW = polygon.getBounds().getSouthWest();
+
+        PolygonOverlay polygonOverlay = new PolygonOverlay();
+        List<LatLng> latLngs = new ArrayList<>();
+
+        latLngs.add(polygon.getBounds().getNorthEast());
+        latLngs.add(polygon.getBounds().getNorthWest());
+        latLngs.add(polygon.getBounds().getSouthWest());
+        latLngs.add(polygon.getBounds().getSouthEast());
+
+        polygonOverlay.setCoords(latLngs);
+        polygonOverlay.setMap(naverMap);
+
+    }
 
     public void makePolygon(LatLng latLng){
         Marker marker = new Marker(latLng);
@@ -921,8 +938,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void btnMissionPoly(View view) {
-        isPolygonMissionEnabled = true;
-        sendRecyclerMessage("(임시) 다각형비행 마커선택모드 on");
+        if(isPolygonMissionEnabled){
+            sendRecyclerMessage("<임시>영역 선택 해제");
+            isPolygonMissionEnabled = false;
+        }
+        else {
+            sendRecyclerMessage("<임시>터치하여 다각형 영역을 선택");
+            isPolygonMissionEnabled = true;
+        }
     }
 
     public void clear_overlay(View view) {
