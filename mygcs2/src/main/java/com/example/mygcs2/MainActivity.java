@@ -574,43 +574,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Marker marker = new Marker(latLng);
         marker.setMap(naverMap);
         polyMarkers.add(marker);
-        polyPointFs.add(new PointF((float)latLng.latitude,(float)latLng.longitude));
+        polyMarkersLatLng.add(latLng);
+
 
         if(polyMarkers.size()>= 3){
-            //TODO latlng sort해야함
+            sortMarkerClockwise(polyMarkers);
+            sortLatLngClockwise(polyMarkersLatLng);
+            polygon.setCoords(polyMarkersLatLng);
             polygon.setMap(naverMap);
         }
         sendRecyclerMessage(String.format("%d",polyMarkers.size()));
     }
 
-    public static void sortPointsClockwise(ArrayList<PointF> points) {
-        float averageX = 0;
-        float averageY = 0;
-
-        for (PointF point : points) {
-            averageX += point.x;
-            averageY += point.y;
-        }
-
-        final float finalAverageX = averageX / points.size();
-        final float finalAverageY = averageY / points.size();
-
-        Comparator<PointF> comparator = new Comparator<PointF>() {
-            public int compare(PointF lhs, PointF rhs) {
-                double lhsAngle = Math.atan2(lhs.y - finalAverageY, lhs.x - finalAverageX);
-                double rhsAngle = Math.atan2(rhs.y - finalAverageY, rhs.x - finalAverageX);
-
-                // Depending on the coordinate system, you might need to reverse these two conditions
-                if (lhsAngle < rhsAngle) return -1;
-                if (lhsAngle > rhsAngle) return 1;
-
-                return 0;
-            }
-        };
-
-        Collections.sort(points, comparator);
-    }
-    public static void sortLatLngClockwise(ArrayList<LatLng> latlngs) {
+    public static void sortLatLngClockwise(List<LatLng> latlngs) {
         float averageX = 0;
         float averageY = 0;
 
@@ -635,8 +611,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         Collections.sort(latlngs, comparator);
     }
+    public static void sortMarkerClockwise(List<Marker> markers) {
+        float averageX = 0;
+        float averageY = 0;
 
+        for (Marker marker : markers) {
+            averageX += marker.getPosition().latitude;
+            averageY += marker.getPosition().longitude;
+        }
 
+        final float finalAverageX = averageX / markers.size();
+        final float finalAverageY = averageY / markers.size();
+
+        Comparator<Marker> comparator = (lhs, rhs) -> {
+            double lhsAngle = Math.atan2(lhs.getPosition().latitude - finalAverageY, lhs.getPosition().longitude - finalAverageX);
+            double rhsAngle = Math.atan2(rhs.getPosition().latitude - finalAverageY, rhs.getPosition().longitude - finalAverageX);
+
+            // Depending on the coordinate system, you might need to reverse these two conditions
+            if (lhsAngle < rhsAngle) return -1;
+            if (lhsAngle > rhsAngle) return 1;
+
+            return 0;
+        };
+
+        Collections.sort(markers, comparator);
+    }
 
     private void LongClickWarning(@NonNull PointF pointF, @NonNull final LatLng coord) {
         MyAlertDialog builder = new MyAlertDialog(this);
@@ -671,6 +670,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         builder.show();
 
     }
+
     private void ChangeToGuidedMode() {
         VehicleApi.getApi(this.drone).setVehicleMode(VehicleMode.COPTER_GUIDED, new SimpleCommandListener() {
             @Override
