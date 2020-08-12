@@ -37,6 +37,7 @@ import com.naver.maps.map.overlay.OverlayImage;
 import com.naver.maps.map.overlay.PathOverlay;
 import com.naver.maps.map.overlay.PolygonOverlay;
 import com.naver.maps.map.util.FusedLocationSource;
+import com.naver.maps.map.util.MarkerIcons;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.apis.ControlApi;
@@ -147,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void test_btn(View view) {
         sendRecyclerMessage(String.format("~~~~~~아주~~~~~~~~~~~~긴~~~~~~~~~~~~~메세지~~~~~~~~"));
+        getDronePolyPath(polygon,0,0);
     }
 
     public void btnclearRecycler(View view) {
@@ -570,21 +572,91 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         initMap();
     }
-    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle){
-        LatLng latLngNE = polygon.getBounds().getNorthEast();
-        LatLng latLngSW = polygon.getBounds().getSouthWest();
 
+    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle, int startPoint){
         PolygonOverlay polygonOverlay = new PolygonOverlay();
-        List<LatLng> latLngs = new ArrayList<>();
-
-        latLngs.add(polygon.getBounds().getNorthEast());
-        latLngs.add(polygon.getBounds().getNorthWest());
-        latLngs.add(polygon.getBounds().getSouthWest());
-        latLngs.add(polygon.getBounds().getSouthEast());
-
-        polygonOverlay.setCoords(latLngs);
+        List<LatLng> latLngsTmp = new ArrayList<>();
+        latLngsTmp.add(polygon.getBounds().getNorthEast());
+        latLngsTmp.add(polygon.getBounds().getNorthWest());
+        latLngsTmp.add(polygon.getBounds().getSouthWest());
+        latLngsTmp.add(polygon.getBounds().getSouthEast());
+        polygonOverlay.setCoords(latLngsTmp);
+        polygonOverlay.setColor(Color.TRANSPARENT);
+        polygonOverlay.setOutlineWidth(3);
         polygonOverlay.setMap(naverMap);
 
+
+        List<LatLng> targetLatLngs = new ArrayList<>();
+
+        if(startPoint == START_POINT_NEAREST){
+            sendRecyclerMessage("가장 가까운 꼭지점에서 비행을 시작합니다.");
+
+            //가장 가까운 점 구하기
+            LatLng currentDronePosition = getCurrentLatLng();
+            //TODO 지워야하는 임시좌표
+            currentDronePosition = new LatLng(35.9436,126.6842);
+            List<LatLng> polygonVertexes = polygon.getCoords();
+            List<Double> distanceToVertexes = new ArrayList<>();
+
+            //모든 꼭지점과 현 드론위치사이 거리 등록
+            for(LatLng latLng : polygonVertexes){
+                distanceToVertexes.add(latLng.distanceTo(currentDronePosition));
+            }
+            //최소거리추출 → 시작점
+            int minInedx = distanceToVertexes.indexOf(Collections.min(distanceToVertexes));
+            LatLng firstPoint = polygonVertexes.get(minInedx);
+            targetLatLngs.add(firstPoint);
+
+            //그 다음 점 구하기
+            double distanceToRight = 0;
+            double distanceToLeft = 0;
+            int rNeghborInedx;
+            int lNeghborInedx;
+            if(minInedx == 0){
+                rNeghborInedx = minInedx + 1;
+                lNeghborInedx = polygonVertexes.size();
+            }
+            else if(minInedx == polygonVertexes.size()){
+                rNeghborInedx = 0;
+                lNeghborInedx = minInedx - 1;
+            }
+            else {
+                rNeghborInedx = minInedx + 1;
+                lNeghborInedx = minInedx - 1;
+            }
+            sendRecyclerMessage(String.format("전체%d%n현제%d%n왼쪽%d%n오른쪽%d%n",
+                    polygonVertexes.size(),minInedx,lNeghborInedx,rNeghborInedx));
+
+            distanceToRight = firstPoint.distanceTo(polygonVertexes.get(rNeghborInedx));
+            distanceToLeft  = firstPoint.distanceTo(polygonVertexes.get(lNeghborInedx));
+            if(distanceToLeft > distanceToRight){
+                sendRecyclerMessage("왼쪽이 더 길다");
+            }
+
+            //그대로 거리이용해서 나머지 구하기
+
+            //출력
+
+            //임시 확인용
+            Marker marker1 = new Marker(polygonVertexes.get(minInedx));
+            marker1.setIcon(MarkerIcons.RED);
+            marker1.setCaptionText("가까운점");
+            marker1.setMap(naverMap);
+            Marker marker2 = new Marker(polygonVertexes.get(lNeghborInedx));
+            marker2.setIcon(MarkerIcons.BLUE);
+            marker2.setCaptionText("왼쪽");
+            marker2.setMap(naverMap);
+            Marker marker3 = new Marker(polygonVertexes.get(rNeghborInedx));
+            marker3.setIcon(MarkerIcons.BLACK);
+            marker3.setCaptionText("오른쪽");
+            marker3.setMap(naverMap);
+        }
+
+    }
+
+    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle){
+        int startPoint = START_POINT_NEAREST;
+        getDronePolyPath(polygon, distance, angle, startPoint);
     }
 
     public void makePolygon(LatLng latLng){
@@ -628,6 +700,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         Collections.sort(latlngs, comparator);
     }
+
     public static void sortMarkerClockwise(List<Marker> markers) {
         float averageX = 0;
         float averageY = 0;
