@@ -3,6 +3,7 @@ package com.example.mygcs2;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.location.Location;
 import android.os.Handler;
@@ -97,6 +98,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     PolygonOverlay polygon = new PolygonOverlay();
     Marker marker_goal = new Marker(); // Guided 모드 마커
     int testCount = 0;
+
+    PolygonOverlay polygonOverlay = new PolygonOverlay();
+    List<LatLng> latLngsTmp = new ArrayList<>();
 
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
@@ -574,8 +578,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle, int startPoint){
-        PolygonOverlay polygonOverlay = new PolygonOverlay();
-        List<LatLng> latLngsTmp = new ArrayList<>();
+        polygon.setMap(null);
+        latLngsTmp.clear();
         latLngsTmp.add(polygon.getBounds().getNorthEast());
         latLngsTmp.add(polygon.getBounds().getNorthWest());
         latLngsTmp.add(polygon.getBounds().getSouthWest());
@@ -591,32 +595,35 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(startPoint == START_POINT_NEAREST){
             sendRecyclerMessage("가장 가까운 꼭지점에서 비행을 시작합니다.");
 
-            //가장 가까운 점 구하기
+            //1.가장 가까운 점 구하기
             LatLng currentDronePosition = getCurrentLatLng();
             //TODO 지워야하는 임시좌표
             currentDronePosition = new LatLng(35.9436,126.6842);
             List<LatLng> polygonVertexes = polygon.getCoords();
             List<Double> distanceToVertexes = new ArrayList<>();
 
-            //모든 꼭지점과 현 드론위치사이 거리 등록
+            //1-1.모든 꼭지점과 현 드론위치사이 거리 등록
             for(LatLng latLng : polygonVertexes){
                 distanceToVertexes.add(latLng.distanceTo(currentDronePosition));
             }
-            //최소거리추출 → 시작점
+            //1-2.최소거리추출 → 시작점
             int minInedx = distanceToVertexes.indexOf(Collections.min(distanceToVertexes));
             LatLng firstPoint = polygonVertexes.get(minInedx);
             targetLatLngs.add(firstPoint);
 
-            //그 다음 점 구하기
+            //2.그 다음 점 구하기
             double distanceToRight = 0;
             double distanceToLeft = 0;
             int rNeghborInedx;
             int lNeghborInedx;
+            LatLng secondPoint;
+            //2-1.시작점 양쪽과의 거리를 구하여 긴변을 두번째로 사용
+            //TODO 긴변을 사용할지 다른변을 사용할지 옵션
             if(minInedx == 0){
                 rNeghborInedx = minInedx + 1;
-                lNeghborInedx = polygonVertexes.size();
+                lNeghborInedx = polygonVertexes.size()-1;
             }
-            else if(minInedx == polygonVertexes.size()){
+            else if(minInedx == polygonVertexes.size()-1){
                 rNeghborInedx = 0;
                 lNeghborInedx = minInedx - 1;
             }
@@ -631,13 +638,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             distanceToLeft  = firstPoint.distanceTo(polygonVertexes.get(lNeghborInedx));
             if(distanceToLeft > distanceToRight){
                 sendRecyclerMessage("왼쪽이 더 길다");
+                secondPoint = polygonVertexes.get(lNeghborInedx);
             }
+            else {
+                sendRecyclerMessage("오른쪽이 더 길다");
+                secondPoint = polygonVertexes.get(rNeghborInedx);
+            }
+            targetLatLngs.add(secondPoint);
 
-            //그대로 거리이용해서 나머지 구하기
+            //3.그대로 거리이용해서 나머지 구하기
+            //3-1.처음과 두번째포인트의 각도와 입력받은 간격을 이용하여 선 그리기
+            double angleFromCoord = getAngleFromCoord(firstPoint,secondPoint);
+            sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
+            PointF offsetPointF = getXYoffsetfromAngle((float) angleFromCoord, distance);
 
-            //출력
+
+
+            //4.출력
 
             //임시 확인용
+            /*
             Marker marker1 = new Marker(polygonVertexes.get(minInedx));
             marker1.setIcon(MarkerIcons.RED);
             marker1.setCaptionText("가까운점");
@@ -650,7 +670,40 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             marker3.setIcon(MarkerIcons.BLACK);
             marker3.setCaptionText("오른쪽");
             marker3.setMap(naverMap);
+             */
         }
+
+    }
+    public LatLng getLatLngoffsetfromMeter(PointF meterPointF){
+        /*18
+
+For latitude do:
+
+var earth = 6378.137,  //radius of the earth in kilometer
+    pi = Math.PI,
+    m = (1 / ((2 * pi / 360) * earth)) / 1000;  //1 meter in degree
+
+var new_latitude = latitude + (your_meters * m);
+For longitude do:
+
+var earth = 6378.137,  //radius of the earth in kilometer
+    pi = Math.PI,
+    cos = Math.cos,
+    m = (1 / ((2 * pi / 360) * earth)) / 1000;  //1 meter in degree
+
+var new_longitude = longitude + (your_meters * m) / cos(latitude * (pi / 180)); */
+    }
+
+    public PointF getXYoffsetfromAngle(float angle, float distance){
+        angle %= 360;
+        if(angle >180) angle -= 180;
+        if(angle>90) angle = 180 - angle;
+        else if(angle < 90) angle = 90 - angle;
+
+        float dx = (float) (distance * Math.cos(angle));
+        float dy = (float) (distance * Math.sin(angle));
+
+        return new PointF(dx,dy);
 
     }
 
@@ -659,8 +712,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         getDronePolyPath(polygon, distance, angle, startPoint);
     }
 
+    private double getAngleFromCoord(LatLng latLng1, LatLng latLng2) {
+        double dLon = (latLng2.longitude - latLng1.longitude);
+
+        double y = Math.sin(dLon) * Math.cos(latLng2.latitude);
+        double x = Math.cos(latLng1.latitude) * Math.sin(latLng2.latitude) - Math.sin(latLng1.latitude)
+                * Math.cos(latLng2.latitude) * Math.cos(dLon);
+
+        double brng = Math.atan2(y, x);
+
+        brng = Math.toDegrees(brng);
+        brng = (brng + 360) % 360;
+        brng = 360 - brng; // count degrees counter-clockwise - remove to make clockwise
+
+        return brng;
+    }
+
     public void makePolygon(LatLng latLng){
         Marker marker = new Marker(latLng);
+        marker.setHeight(50);
+        marker.setWidth(50);
         marker.setMap(naverMap);
         polyMarkers.add(marker);
         polyMarkersLatLng.add(latLng);
