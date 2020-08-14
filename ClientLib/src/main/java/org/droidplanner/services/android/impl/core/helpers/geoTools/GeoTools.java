@@ -64,7 +64,7 @@ public class GeoTools {
      * @param distance distance to be added
      * @return New point with the added distance
      */
-    private static LatLong newCoordFromBearingAndDistance(double lat, double lon, double bearing, double distance) {
+    public static LatLong newCoordFromBearingAndDistance(double lat, double lon, double bearing, double distance) {
 
         double lat1 = Math.toRadians(lat);
         double lon1 = Math.toRadians(lon);
