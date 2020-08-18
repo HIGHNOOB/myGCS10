@@ -67,6 +67,7 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 import org.droidplanner.services.android.impl.core.helpers.geoTools.GeoTools;
 import org.droidplanner.services.android.impl.core.helpers.geoTools.LineLatLong;
 import org.droidplanner.services.android.impl.core.polygon.Polygon;
+import org.droidplanner.services.android.impl.core.survey.grid.CircumscribedGrid;
 import org.droidplanner.services.android.impl.core.survey.grid.Trimmer;
 
 import java.time.LocalDateTime;
@@ -123,6 +124,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Marker tmpMarker4 = new Marker();
     Marker tmpMarker5 = new Marker();
     Marker tmpMarker6 = new Marker();
+
+    Marker tmpMarker00 = new Marker();
+    Marker tmpMarker01 = new Marker();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -675,41 +679,41 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             //3-1.처음과 두번째포인트의 각도와 입력받은 간격을 이용하여 선 그리기
             double angleFromCoord = getAngleFromCoord(firstPoint,secondPoint);
             sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
-            PointF offsetPointF = getXYoffsetfromAngle((float) angleFromCoord, distance);
 
-            //3-2.첫 교점 구하기
-            LatLng firstCrossLatLng;
-            if(pathBoundDiagonalType == DIAGONAL_TYPE_NE_TO_SW){
-                firstCrossLatLng = getIntersection(firstPoint,secondPoint,boundNE,boundSW);
-            }
-            else{// if(pathBoundDiagonalType == DIAGONAL_TYPE_NW_TO_SE){
-                firstCrossLatLng = getIntersection(firstPoint,secondPoint,boundNW,boundSE);
+
+            List<LatLong> polygonLatLong = new ArrayList<>();
+
+            for(LatLng latLng: polygonVertexes){
+                polygonLatLong.add(new LatLong(latLng.latitude,latLng.longitude));
             }
 
-            //3-3.교점과 중심을 비교하여 진행방향 확인하기
-            if(firstCrossLatLng.latitude < polygon.getBounds().getCenter().latitude){
-                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
-                    pathDirection = DIRECTION_NE;
-                }
-                else {
-                    pathDirection = DIRECTION_NW;
-                }
+            List<LineLatLong> circumscribedGrid = null;
+            try {
+                circumscribedGrid = new CircumscribedGrid(polygonLatLong, angleFromCoord, (double)TMP_DISTANCE).getGrid();
+            } catch (Exception e) {
+                sendRecyclerMessage(e.toString());
+                e.printStackTrace();
             }
-            else{
-                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
-                    pathDirection = DIRECTION_SE;
-                }
-                else {
-                    pathDirection = DIRECTION_SW;
-                }
-            }
-            /*
-            LatLong offsetLatLng4 = GeoTools.newCoordFromBearingAndDistance(firstCrossLatLng.latitude,firstCrossLatLng.longitude,angleFromCoord,TMP_DISTANCE);
-            LatLong offsetLatLng3 = GeoTools.newCoordFromBearingAndDistance(firstCrossLatLng.latitude,firstCrossLatLng.longitude,angleFromCoord,TMP_DISTANCE*2);
-            */
+            List<LineLatLong> trimedGrid = new Trimmer(circumscribedGrid, makePoly().getLines()).getTrimmedGrid();
 
-            LatLong offsetLatLng4 = GeoTools.moveCoordinate(new LatLong(firstCrossLatLng.latitude,firstCrossLatLng.longitude),offsetPointF.x,offsetPointF.y);
-            LatLong offsetLatLng3 = GeoTools.moveCoordinate(new LatLong(firstCrossLatLng.latitude,firstCrossLatLng.longitude),offsetPointF.x*2,offsetPointF.y*2);
+            for(LineLatLong lineLatLong : trimedGrid){
+                tmpMarker00 = new Marker(new LatLng(lineLatLong.getStart().getLatitude(),lineLatLong.getStart().getLongitude()));
+                tmpMarker00.setCaptionText("시작점테스트");
+                tmpMarker00.setAngle(90);
+                tmpMarker00.setIcon(MarkerIcons.BLACK);
+                tmpMarker00.setMap(naverMap);
+                sendRecyclerMessage("몇개나 만들어지냐");
+
+                tmpMarker01 = new Marker(new LatLng(lineLatLong.getEnd().getLatitude(),lineLatLong.getEnd().getLongitude()));
+                tmpMarker01.setCaptionText("끝점테스트");
+                tmpMarker01.setAngle(270);
+                tmpMarker01.setIcon(MarkerIcons.BLACK);
+                tmpMarker01.setMap(naverMap);
+            }
+            //3-3. 진행방향 확인하기
+
+            LatLong offsetLatLng4 = GeoTools.newCoordFromBearingAndDistance(new LatLong(polygonVertexes.get(minInedx).latitude,polygonVertexes.get(minInedx).longitude),angleFromCoord+TMP_ANGLE,TMP_DISTANCE);
+            LatLong offsetLatLng3 = GeoTools.newCoordFromBearingAndDistance(new LatLong(polygonVertexes.get(minInedx).latitude,polygonVertexes.get(minInedx).longitude),angleFromCoord+TMP_ANGLE,TMP_DISTANCE*2);
 
             LatLng offsetLatLng1 = new LatLng(offsetLatLng4.getLatitude(),offsetLatLng4.getLongitude());
             LatLng offsetLatLng2 = new LatLng(offsetLatLng3.getLatitude(),offsetLatLng3.getLongitude());
@@ -724,11 +728,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             tmpMarker4.setMap(null);
             tmpMarker5.setMap(null);
             tmpMarker6.setMap(null);
-
-            tmpMarker1 = new Marker(firstCrossLatLng);
-            tmpMarker1.setIcon(MarkerIcons.RED);
-            tmpMarker1.setCaptionText("첫교차점");
-            tmpMarker1.setMap(naverMap);
 
             tmpMarker2 = new Marker(offsetLatLng1);
             tmpMarker2.setIcon(MarkerIcons.YELLOW);
@@ -756,6 +755,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             tmpMarker6.setMap(naverMap);
         }
 
+    }
+
+    private Polygon makePoly() {
+        ArrayList<LatLong> polygonPointList = new ArrayList<>();
+        Polygon poly = new Polygon();
+        List<LatLong> latLongList = new ArrayList<>();
+        for(LatLong latLong : polygonPointList) {
+            latLongList.add(latLong);
+        }
+        poly.addPoints(latLongList);
+        return poly;
     }
 
     public LatLng getIntersection(LatLng l1p1, LatLng l1p2, LatLng l2p1, LatLng l2p2){
@@ -1209,3 +1219,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 *
 *
 * */
+
+            /*
+            //3-3.교점과 중심을 비교하여 진행방향 확인하기
+            if(firstCrossLatLng.latitude < polygon.getBounds().getCenter().latitude){
+                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
+                    pathDirection = DIRECTION_NE;
+                }
+                else {
+                    pathDirection = DIRECTION_NW;
+                }
+            }
+            else{
+                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
+                    pathDirection = DIRECTION_SE;
+                }
+                else {
+                    pathDirection = DIRECTION_SW;
+                }
+            }*/
