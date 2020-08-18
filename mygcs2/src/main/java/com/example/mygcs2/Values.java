@@ -6,6 +6,7 @@ import com.naver.maps.map.NaverMap;
 
 public class Values {
     public static int TMP_DISTANCE =20;
+    public static double TMP_ANGLE = 90;
     public static NaverMap.MapType MAPTYPE_DEFAULT = NaverMap.MapType.Basic;
 
     public static int POLYGON_OUTLINE_WIDTH = 5;
