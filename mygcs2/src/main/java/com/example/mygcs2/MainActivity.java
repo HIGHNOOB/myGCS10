@@ -706,6 +706,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public boolean isInside(LatLong latLong, Polygon polygon){
+        double angle = 0;
+        for(LatLong latLongPoly : polygon.getPoints()){
+            angle += angl
+        }
 //bool isInside(point a, polygon B)
 //{
 //    double angle = 0;
