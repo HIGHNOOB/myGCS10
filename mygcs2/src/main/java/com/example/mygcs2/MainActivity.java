@@ -67,6 +67,7 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import org.droidplanner.services.android.impl.core.helpers.geoTools.GeoTools;
 import org.droidplanner.services.android.impl.core.helpers.geoTools.LineLatLong;
+import org.droidplanner.services.android.impl.core.helpers.units.Area;
 import org.droidplanner.services.android.impl.core.polygon.Polygon;
 import org.droidplanner.services.android.impl.core.survey.grid.CircumscribedGrid;
 import org.droidplanner.services.android.impl.core.survey.grid.Trimmer;
@@ -99,17 +100,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Marker droneMarker = new Marker();
     List<Marker> polyMarkers = new ArrayList<>();
     List<LatLng> polyMarkersLatLng = new ArrayList<>();
-    ArrayList<PointF> polyPointFs = new ArrayList<>();
     PolygonOverlay polygon = new PolygonOverlay();
     Marker marker_goal = new Marker(); // Guided 모드 마커
     int testCount = 0;
-    int pathBoundDiagonalType;
-    int pathDirection;
 
     int rNeghborInedx;
     int lNeghborInedx;
 
-    public ArrayList<LatLong> polygonPointList = new ArrayList<>();
 
     PolygonOverlay polygonOverlay = new PolygonOverlay();
     List<LatLng> latLngsTmp = new ArrayList<>();
@@ -123,16 +120,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private double droneMissionAlt = 1;
 
     ArrayList<String> recycler_list = new ArrayList<>();
-
-    Marker tmpMarker1 = new Marker();
-    Marker tmpMarker2 = new Marker();
-    Marker tmpMarker3 = new Marker();
-    Marker tmpMarker4 = new Marker();
-    Marker tmpMarker5 = new Marker();
-    Marker tmpMarker6 = new Marker();
-
-    Marker tmpMarker00 = new Marker();
-    Marker tmpMarker01 = new Marker();
 
     List<Marker> markers = new ArrayList<>();
 
@@ -505,8 +492,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-
-
     protected void updateDronePath(){
         dronePathCoords.add(getCurrentLatLng());
         path.setCoords(dronePathCoords);
@@ -621,6 +606,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void manageMarker(LatLng latLng){
         markers.add(new Marker(latLng));
     }
+
     public void manageMarker(LatLng latLng, String captionText){
 
     }
@@ -679,261 +665,90 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         path.add(secondPoint);
     }
 
-    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle, int startPoint){
-        List<LatLng> polygonVertexes = polygon.getCoords();
-
-        drawBound(polygon);
-
-        List<LatLng> resultPathLatLngs = new ArrayList<>();
-
-        if(startPoint == START_POINT_NEAREST){
-            //1.가장 가까운 점 구하기
-            getFirstPoint(resultPathLatLngs);
-            //2.그 다음 점 구하기
-            getSecondPoint(resultPathLatLngs);
-            //3. 나머지 점 구하기
-
-            //처음과 그다음점 각도확인
-            double angleFromCoord = getAngleFromCoord(resultPathLatLngs.get(0),resultPathLatLngs.get(1));
-            sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
-
-            while (true){//반복: 교점없을때까지 (교점은 바운드 내부만 인정한다)
-                int lastPointIndex = resultPathLatLngs.size()-1;
-                LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
-                LatLong lastLatLong = new LatLong(lastPoint.latitude, lastPoint.longitude);
-                LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+90, TMP_DISTANCE);
-                //90도 꺾고 일정 거리 이동하여 점을만듦
-                //이때 그 점이 바운드를 넘기면 break
-                // 그 점과 폴리곤 모서리들과 비교하여 가장 긴 길이get
-                //그 길이와 아까 구한 각도를 이용하여 위방향(각도방향)과 아래방향(각도 +-180)선을 그림
-                //선과 폴리곤의 교점 (각 선에서 가장 가까운 하나만)
-                //이 두개
-
-                //반대쪽도 없으면 break
-
-                //교점있는경우 가까운교점 인정
-            }
-
-
-
-            //4.출력
-
-            //임시 확인용
-            tmpMarker1.setMap(null);
-            tmpMarker2.setMap(null);
-            tmpMarker3.setMap(null);
-            tmpMarker4.setMap(null);
-            tmpMarker5.setMap(null);
-            tmpMarker6.setMap(null);
-
-            /*
-            tmpMarker2 = new Marker(offsetLatLng1);
-            tmpMarker2.setIcon(MarkerIcons.YELLOW);
-            tmpMarker2.setCaptionText("일정거리이동");
-            tmpMarker2.setMap(naverMap);
-
-            tmpMarker3 = new Marker(offsetLatLng2);
-            tmpMarker3.setIcon(MarkerIcons.PINK);
-            tmpMarker3.setCaptionText("일정거리이동2");
-            tmpMarker3.setMap(naverMap);
-*/
-            tmpMarker4 = new Marker(polygonVertexes.get(minInedx));
-            tmpMarker4.setIcon(MarkerIcons.GREEN);
-            tmpMarker4.setCaptionText("가까운점");
-            tmpMarker4.setMap(naverMap);
-
-            tmpMarker5 = new Marker(polygonVertexes.get(lNeghborInedx));
-            tmpMarker5.setIcon(MarkerIcons.BLUE);
-            tmpMarker5.setCaptionText("왼쪽");
-            tmpMarker5.setMap(naverMap);
-
-            tmpMarker6 = new Marker(polygonVertexes.get(rNeghborInedx));
-            tmpMarker6.setIcon(MarkerIcons.BLACK);
-            tmpMarker6.setCaptionText("오른쪽");
-            tmpMarker6.setMap(naverMap);
+    public Polygon getPolygonfromPolygonOverlay(PolygonOverlay polygonOverlay){
+        Polygon polygon = new Polygon();
+        for(LatLng latLng: polygonOverlay.getCoords()){
+            polygon.addPoint(new LatLong(latLng.latitude,latLng.longitude));
         }
-
+        return polygon;
     }
 
-//    public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle, int startPoint){
-//        LatLng boundNE =polygon.getBounds().getNorthEast();
-//        LatLng boundNW =polygon.getBounds().getNorthWest();
-//        LatLng boundSE =polygon.getBounds().getSouthEast();
-//        LatLng boundSW =polygon.getBounds().getSouthWest();
-//
-//        polygon.setMap(null);
-//
-//        //TODO 지울것) 테두리 그리기
-//        latLngsTmp.clear();
-//        latLngsTmp.add(boundNE);
-//        latLngsTmp.add(boundNW);
-//        latLngsTmp.add(boundSW);
-//        latLngsTmp.add(boundSE);
-//        polygonOverlay.setCoords(latLngsTmp);
-//        polygonOverlay.setColor(Color.TRANSPARENT);
-//        polygonOverlay.setOutlineWidth(3);
-//        polygonOverlay.setMap(naverMap);
-//
-//
-//        List<LatLng> targetLatLngs = new ArrayList<>();
-//
-//        if(startPoint == START_POINT_NEAREST){
-//            sendRecyclerMessage("가장 가까운 꼭지점에서 비행을 시작합니다.");
-//
-//            //1.가장 가까운 점 구하기
-//            LatLng currentDronePosition = getCurrentLatLng();
-//            //TODO 지워야하는 임시좌표
-//            currentDronePosition = new LatLng(35.9436,126.6842);
-//            Marker marker = new Marker(currentDronePosition);
-//            marker.setWidth(50);
-//            marker.setHeight(50);
-//            marker.setCaptionText("드론");
-//            marker.setMap(naverMap);
-//
-//            List<LatLng> polygonVertexes = polygon.getCoords();
-//            List<Double> distanceToVertexes = new ArrayList<>();
-//
-//            //1-1.모든 꼭지점과 현 드론위치사이 거리 등록
-//            for(LatLng latLng : polygonVertexes){
-//                distanceToVertexes.add(latLng.distanceTo(currentDronePosition));
-//            }
-//            //1-2.최소거리추출 → 시작점
-//            int minInedx = distanceToVertexes.indexOf(Collections.min(distanceToVertexes));
-//            LatLng firstPoint = polygonVertexes.get(minInedx);
-//            targetLatLngs.add(firstPoint);
-//
-//            //2.그 다음 점 구하기
-//            double distanceToRight = 0;
-//            double distanceToLeft = 0;
-//            int rNeghborInedx;
-//            int lNeghborInedx;
-//            LatLng secondPoint;
-//            //2-1.시작점 양쪽과의 거리를 구하여 긴변을 두번째로 사용
-//            //TODO 긴변을 사용할지 다른변을 사용할지 옵션
-//            if(minInedx == 0){
-//                lNeghborInedx = minInedx + 1;
-//                rNeghborInedx = polygonVertexes.size()-1;
-//            }
-//            else if(minInedx == polygonVertexes.size()-1){
-//                lNeghborInedx = 0;
-//                rNeghborInedx = minInedx - 1;
-//            }
-//            else {
-//                lNeghborInedx = minInedx + 1;
-//                rNeghborInedx = minInedx - 1;
-//            }
-//            sendRecyclerMessage(String.format("전체%d%n현제%d%n왼쪽%d%n오른쪽%d%n",
-//                    polygonVertexes.size(),minInedx,lNeghborInedx,rNeghborInedx));
-//
-//            distanceToRight = firstPoint.distanceTo(polygonVertexes.get(rNeghborInedx));
-//            distanceToLeft  = firstPoint.distanceTo(polygonVertexes.get(lNeghborInedx));
-//            if(distanceToLeft > distanceToRight){
-//                sendRecyclerMessage("왼쪽이 더 길다");
-//                secondPoint = polygonVertexes.get(lNeghborInedx);
-//            }
-//            else {
-//                sendRecyclerMessage("오른쪽이 더 길다");
-//                secondPoint = polygonVertexes.get(rNeghborInedx);
-//            }
-//            targetLatLngs.add(secondPoint);
-//
-//            //3.그대로 거리이용해서 나머지 구하기
-//            //3-1.처음과 두번째포인트의 각도와 입력받은 간격을 이용하여 선 그리기
-//            double angleFromCoord = getAngleFromCoord(firstPoint,secondPoint);
-//            sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
-//
-//
-//            List<LatLong> polygonLatLong = new ArrayList<>();
-//            for(LatLong latLong: polygonLatLong){
-//                polygonPointList.add(latLong);
-//            }
-//
-//            for(LatLng latLng: polygonVertexes){
-//                polygonLatLong.add(new LatLong(latLng.latitude,latLng.longitude));
-//            }
-//
-//            List<LineLatLong> circumscribedGrid = null;
-//            try {
-//                circumscribedGrid = new CircumscribedGrid(polygonLatLong, angleFromCoord, (double)TMP_DISTANCE).getGrid();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//            }
-//            List<LineLatLong> trimedGrid = new Trimmer(circumscribedGrid, makePoly().getLines()).getTrimmedGrid();
-//
-//            for(LineLatLong lineLatLong : trimedGrid){
-//                tmpMarker00 = new Marker(new LatLng(lineLatLong.getStart().getLatitude(),lineLatLong.getStart().getLongitude()));
-//                tmpMarker00.setCaptionText("시작점테스트");
-//                tmpMarker00.setAngle(90);
-//                tmpMarker00.setIcon(MarkerIcons.BLACK);
-//                tmpMarker00.setMap(naverMap);
-//                sendRecyclerMessage("몇개나 만들어지냐");
-//
-//                tmpMarker01 = new Marker(new LatLng(lineLatLong.getEnd().getLatitude(),lineLatLong.getEnd().getLongitude()));
-//                tmpMarker01.setCaptionText("끝점테스트");
-//                tmpMarker01.setAngle(270);
-//                tmpMarker01.setIcon(MarkerIcons.BLACK);
-//                tmpMarker01.setMap(naverMap);
-//            }
-//            //3-3. 진행방향 확인하기
-//
-//            LatLong offsetLatLng4 = GeoTools.newCoordFromBearingAndDistance(
-//                    new LatLong(polygonVertexes.get(minInedx).latitude,polygonVertexes.get(minInedx).longitude),
-//                    angleFromCoord+TMP_ANGLE,TMP_DISTANCE);
-//            LatLong offsetLatLng3 = GeoTools.newCoordFromBearingAndDistance(
-//                    new LatLong(polygonVertexes.get(minInedx).latitude,polygonVertexes.get(minInedx).longitude),
-//                    angleFromCoord+TMP_ANGLE,TMP_DISTANCE*2);
-//
-//            LatLng offsetLatLng1 = new LatLng(offsetLatLng4.getLatitude(),offsetLatLng4.getLongitude());
-//            LatLng offsetLatLng2 = new LatLng(offsetLatLng3.getLatitude(),offsetLatLng3.getLongitude());
-//
-//
-//            //4.출력
-//
-//            //임시 확인용
-//            tmpMarker1.setMap(null);
-//            tmpMarker2.setMap(null);
-//            tmpMarker3.setMap(null);
-//            tmpMarker4.setMap(null);
-//            tmpMarker5.setMap(null);
-//            tmpMarker6.setMap(null);
-//
-//            tmpMarker2 = new Marker(offsetLatLng1);
-//            tmpMarker2.setIcon(MarkerIcons.YELLOW);
-//            tmpMarker2.setCaptionText("일정거리이동");
-//            tmpMarker2.setMap(naverMap);
-//
-//            tmpMarker3 = new Marker(offsetLatLng2);
-//            tmpMarker3.setIcon(MarkerIcons.PINK);
-//            tmpMarker3.setCaptionText("일정거리이동2");
-//            tmpMarker3.setMap(naverMap);
-//
-//            tmpMarker4 = new Marker(polygonVertexes.get(minInedx));
-//            tmpMarker4.setIcon(MarkerIcons.GREEN);
-//            tmpMarker4.setCaptionText("가까운점");
-//            tmpMarker4.setMap(naverMap);
-//
-//            tmpMarker5 = new Marker(polygonVertexes.get(lNeghborInedx));
-//            tmpMarker5.setIcon(MarkerIcons.BLUE);
-//            tmpMarker5.setCaptionText("왼쪽");
-//            tmpMarker5.setMap(naverMap);
-//
-//            tmpMarker6 = new Marker(polygonVertexes.get(rNeghborInedx));
-//            tmpMarker6.setIcon(MarkerIcons.BLACK);
-//            tmpMarker6.setCaptionText("오른쪽");
-//            tmpMarker6.setMap(naverMap);
-//        }
-//
-//    }
+    public LatLng getLatLngfromLatLong(LatLong latLong){
+        return new LatLng(latLong.getLatitude(),latLong.getLongitude());
+    }
 
-    private Polygon makePoly() {
-        Polygon poly = new Polygon();
-        List<LatLong> latLongList = new ArrayList<>();
-        for(LatLong latLong : polygonPointList) {
-            latLongList.add(latLong);
+    public LatLong getLatLongfromLatLng(LatLng latLng){
+        return new LatLong(latLng.latitude,latLng.longitude);
+    }
+
+    public List<LatLong> getLatLongListfromLatLngList(List<LatLng> latLngs){
+        List<LatLong> latLongs = new ArrayList<>();
+        for(LatLng latLng: latLngs){
+            latLongs.add(new LatLong(latLng.latitude,latLng.longitude));
         }
-        poly.addPoints(latLongList);
-        return poly;
+        return latLongs;
+    }
+
+    public List<LatLng> getLatLngListfromLatLongList(List<LatLong> latLongs){
+        List<LatLng> latLngs = new ArrayList<>();
+        for(LatLong latLong: latLongs){
+            latLngs.add(new LatLng(latLong.getLatitude(),latLong.getLongitude()));
+        }
+        return latLngs;
+    }
+
+    public double getLongestDistance(List<LatLng> latLngs, LatLng reference){
+        List<Double> distances = new ArrayList<>();
+        for(LatLng latLng : latLngs){
+            distances.add(latLng.distanceTo(reference));
+        }
+        double longest = distances.indexOf(Collections.max(distances));
+        return longest;
+    }
+
+    public void getDronePolyPath(PolygonOverlay polygonOverlay, int distance, float angle, int startPoint){
+        Polygon polygon = getPolygonfromPolygonOverlay(polygonOverlay);
+        List<LatLng> polygonVertices = getLatLngListfromLatLongList(polygon.getPoints());
+        List<LatLng> resultPathLatLngs = new ArrayList<>();
+
+        drawBound(polygonOverlay);
+        if(startPoint == START_POINT_NEAREST) {
+            //1.가장 가까운 점 구하기
+            getFirstPoint(resultPathLatLngs);
+        }
+        //2.그 다음 점 구하기
+        getSecondPoint(resultPathLatLngs);
+        //3. 나머지 점 구하기
+        double angleFromCoord = getAngleFromCoord(resultPathLatLngs.get(0),resultPathLatLngs.get(1));
+        sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
+
+        while (true){//반복: 교점없을때까지 (교점은 폴리곤 내부만 인정한다)
+            int lastPointIndex = resultPathLatLngs.size()-1;
+            LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
+            LatLong lastLatLong = new LatLong(lastPoint.latitude, lastPoint.longitude);
+            //90도 꺾고 일정 거리 이동하여 점을만듦
+            LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+90, TMP_DISTANCE);
+            //이때 그 점이 바운드를 넘기면 break
+            if(AreaUtils.containsLocation(getLatLngfromLatLong(nextFinderPoint), polygonVertices , GEODESIC)){
+                sendRecyclerMessage("이 점은 내부에 속함");
+            } else {
+                sendRecyclerMessage("더이상 폴리곤에 속하는 점을 찾을 수 없음");
+                break;
+            }
+            // 그 점과 폴리곤 모서리들과 비교하여 가장 긴 길이get
+            double longest = getLongestDistance(polygonVertices,getLatLngfromLatLong(nextFinderPoint));
+            //그 길이와 아까 구한 각도를 이용하여 위방향(각도방향)과 아래방향(각도 +-180)선을 그림
+
+            //선과 폴리곤의 교점 (각 선에서 가장 가까운 하나만)
+
+            //이 두개
+
+            //반대쪽도 없으면 break
+
+            //교점있는경우 가까운교점 인정
+        }
+
+        //임시 확인용
     }
 
     public LatLng getIntersection(LatLng l1p1, LatLng l1p2, LatLng l2p1, LatLng l2p2){
@@ -949,19 +764,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         double delta = a1 * b2 - a2 * b1;
         return new LatLng((b2 * c1 - b1 * c2) / delta, (a1 * c2 - a2 * c1) / delta);
-    }
-
-    public PointF getXYoffsetfromAngle(float angle, float distance){
-        angle %= 360;
-        if(angle%180 > 90) pathBoundDiagonalType = DIAGONAL_TYPE_NE_TO_SW;
-        else pathBoundDiagonalType = DIAGONAL_TYPE_NW_TO_SE;
-
-        float dx = (float) (distance * Math.sin(angle));
-        float dy = (float) (distance * Math.cos(angle));
-
-        sendRecyclerMessage(String.format("X거리:%f, Y거리:%f",dx,dy));
-        return new PointF(dy,dx);
-
     }
 
     public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle){
@@ -1351,58 +1153,3 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 }
-
-/* 폐기물 리스트
-*
-*
-*   public LatLng moveLatLngtoMeter(LatLng latLngOrigin, PointF pointMeter, int direction){
-        double earth = EARTH;
-        double pi = Math.PI;
-        double meter = (1 / ((2 * pi / 360) * earth)) / 1000;  //1 meter in degree
-        double newLatitude;
-        double newLongitude;
-
-        if(direction == DIRECTION_NE){
-            sendRecyclerMessage("북동");
-            newLatitude = latLngOrigin.latitude + (meter*pointMeter.y);
-            newLongitude = latLngOrigin.longitude + (meter*pointMeter.x)/Math.cos(latLngOrigin.latitude*(Math.PI/180));
-        }else if(direction == DIRECTION_NW){
-            sendRecyclerMessage("북서");
-            newLatitude = latLngOrigin.latitude + (meter*pointMeter.y);
-            newLongitude = latLngOrigin.longitude - (meter*pointMeter.x)/Math.cos(latLngOrigin.latitude*(Math.PI/180));
-        }else if(direction == DIRECTION_SE){
-            sendRecyclerMessage("남동");
-            newLatitude = latLngOrigin.latitude + (meter*pointMeter.y);
-            newLongitude = latLngOrigin.longitude + (meter*pointMeter.x)/Math.cos(latLngOrigin.latitude*(Math.PI/180));
-        }
-        else{//(direction == DIRECTION_SW)
-            sendRecyclerMessage("남서");
-            newLatitude = latLngOrigin.latitude + (meter*pointMeter.y);
-            newLongitude = latLngOrigin.longitude + (meter*pointMeter.x)/Math.cos(latLngOrigin.latitude*(Math.PI/180));
-        }
-
-        return new LatLng(newLatitude,newLongitude);
-    }
-
-*
-*
-* */
-
-            /*
-            //3-3.교점과 중심을 비교하여 진행방향 확인하기
-            if(firstCrossLatLng.latitude < polygon.getBounds().getCenter().latitude){
-                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
-                    pathDirection = DIRECTION_NE;
-                }
-                else {
-                    pathDirection = DIRECTION_NW;
-                }
-            }
-            else{
-                if(firstCrossLatLng.longitude < polygon.getBounds().getCenter().longitude) {
-                    pathDirection = DIRECTION_SE;
-                }
-                else {
-                    pathDirection = DIRECTION_SW;
-                }
-            }*/
