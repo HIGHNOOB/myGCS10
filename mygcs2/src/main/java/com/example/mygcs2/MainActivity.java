@@ -3,7 +3,6 @@ package com.example.mygcs2;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.location.Location;
 import android.os.Handler;
@@ -706,6 +705,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return longest;
     }
 
+    public boolean isInside(LatLong latLong, Polygon polygon){
+//bool isInside(point a, polygon B)
+//{
+//    double angle = 0;
+//    for(int i = 0; i < B.nbVertices(); i++)
+//    {
+//        angle += angle(B[i],a,B[i+1]);
+//    }
+//    return (abs(angle) > pi);
+//}
+        return true;
+    }
+
     public void getDronePolyPath(PolygonOverlay polygonOverlay, int distance, float angle, int startPoint){
         Polygon polygon = getPolygonfromPolygonOverlay(polygonOverlay);
         List<LatLng> polygonVertices = getLatLngListfromLatLongList(polygon.getPoints());
@@ -750,10 +762,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         //임시 확인용
     }
+    public LatLng getIntersection(Polygon polygon, LatLng p1, LatLng p2){
+        Area area;
+
+    }
 
     public LatLng getIntersection(LatLng l1p1, LatLng l1p2, LatLng l2p1, LatLng l2p2){
         //지구는 둥글고 좌표는 평평하기 때문에 약간의 왜곡이 있을 수 있음
-        //아직 왜곡 보정하지 않음
         double a1 = l1p2.longitude - l1p1.longitude;
         double b1 = l1p1.latitude - l1p2.latitude;
         double c1 = a1 * l1p1.latitude + b1 * l1p1.longitude;
