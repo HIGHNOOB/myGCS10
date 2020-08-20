@@ -28,5 +28,7 @@ public class Values {
     public static int DIRECTION_SE =2;
     public static int DIRECTION_SW =3;
 
+    public static boolean GEODESIC = true;
+
 
 }
