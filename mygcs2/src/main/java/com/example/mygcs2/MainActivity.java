@@ -97,18 +97,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private Spinner modeSelector;
     private Marker droneMarker = new Marker();
-    List<Marker> polyMarkers = new ArrayList<>();
     List<LatLng> polyMarkersLatLng = new ArrayList<>();
     PolygonOverlay polygon = new PolygonOverlay();
     Marker marker_goal = new Marker(); // Guided 모드 마커
-    int testCount = 0;
 
     int rNeghborInedx;
     int lNeghborInedx;
 
 
     PolygonOverlay polygonOverlay = new PolygonOverlay();
-    List<LatLng> latLngsTmp = new ArrayList<>();
+    List<LatLng> latLngsBoundx2 = new ArrayList<>();
 
     PathOverlay path = new PathOverlay();
     List<LatLng> dronePathCoords = new ArrayList<>();
@@ -163,8 +161,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void test_btn(View view) {
-        sendRecyclerMessage(String.format("~~~~~~아주~~~~~~~~~~~~긴~~~~~~~~~~~~~메세지~~~~~~~~"));
-        getDronePolyPath(polygon, TMP_DISTANCE,0);
+        if(polyMarkersLatLng.size() < 2){
+            sendRecyclerMessage("최소 3개의 점을 입력해야 합니다.");
+        }else {
+            getDronePolyPath(polygon, TMP_DISTANCE,0);
+        }
+
     }
 
     public void btnclearRecycler(View view) {
@@ -588,15 +590,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void drawBound(PolygonOverlay polygon){
-        polygon.setMap(null);
-        latLngsTmp.clear();
+        LatLng center = polygon.getBounds().getCenter();
+        Double offsetX = polygon.getBounds().getEastLongitude() - center.longitude;
+        Double offsetY = polygon.getBounds().getNorthLatitude() - center.latitude;
+        sendRecyclerMessage("X = "+ offsetX + " Y="+ offsetY);
 
-        latLngsTmp.add(polygon.getBounds().getNorthEast());
-        latLngsTmp.add(polygon.getBounds().getNorthWest());
-        latLngsTmp.add(polygon.getBounds().getSouthWest());
-        latLngsTmp.add(polygon.getBounds().getSouthEast());
+        Double north = polygon.getBounds().getNorthLatitude() + offsetY;
+        Double south = polygon.getBounds().getSouthLatitude() - offsetY;
+        Double east = polygon.getBounds().getEastLongitude() + offsetX;
+        Double west = polygon.getBounds().getWestLongitude() - offsetX;
 
-        polygonOverlay.setCoords(latLngsTmp);
+        latLngsBoundx2.clear();
+        latLngsBoundx2.add(new LatLng(north,east));//ne
+        latLngsBoundx2.add(new LatLng(north,west));//nw
+        latLngsBoundx2.add(new LatLng(south,west));//sw
+        latLngsBoundx2.add(new LatLng(south,east));//se
+
+        polygonOverlay.setCoords(latLngsBoundx2);
         polygonOverlay.setColor(Color.TRANSPARENT);
         polygonOverlay.setOutlineWidth(3);
         polygonOverlay.setMap(naverMap);
@@ -606,18 +616,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Marker marker = new Marker(latLng);
         marker.setCaptionText(captionText);
         marker.setIcon(markerIcons);
+        marker.setWidth(MARKER_SIZE);
+        marker.setHeight(MARKER_SIZE);
         marker.setMap(naverMap);
-
-        markers.add(new Marker(latLng));
+        markers.add(marker);
     }
 
     public void manageMarker(LatLng latLng, String captionText){
         manageMarker(latLng, captionText, MarkerIcons.GREEN);
     }
 
-    public void getFirstPoint(List<LatLng> path){
-        sendRecyclerMessage("가장 가까운 꼭지점에서 비행을 시작합니다.");
+    public void manageMarker(LatLong latLong, String captionText){
+        manageMarker(new LatLng(latLong.getLatitude(),latLong.getLongitude()), captionText, MarkerIcons.GREEN);
+    }
 
+    public void manageMarker(LatLong latLong, String captionText, OverlayImage markerIcons){
+        manageMarker(new LatLng(latLong.getLatitude(),latLong.getLongitude()), captionText, markerIcons);
+    }
+
+    public void getFirstPoint(List<LatLng> path){
         LatLng currentDronePosition = getCurrentLatLng();
         //TODO 지워야하는 임시좌표
         currentDronePosition = new LatLng(35.9436,126.6842);
@@ -748,20 +765,36 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         sendRecyclerMessage(String.format("각도: %f",angleFromCoord));
 
         int distance_count = 1;
-        while (true){//반복: 교점없을때까지 (교점은 폴리곤 내부만 인정한다)
+        //3-1. 우선 선과 도형의 관계 파악 (위로 꺾을지 아래로 꺾을지)
+        int turnDirection = 1;
+        LatLong centerFnS = GeoTools.pointAlongTheLine(getLatLongfromLatLng(resultPathLatLngs.get(0)),getLatLongfromLatLng(resultPathLatLngs.get(1)),
+                (int)(resultPathLatLngs.get(0).distanceTo(resultPathLatLngs.get(1))*0.5));
+        LatLong centerRight = GeoTools.newCoordFromBearingAndDistance(centerFnS,angleFromCoord+90,TMP_DISTANCE);
+        LatLong centerLeft = GeoTools.newCoordFromBearingAndDistance(centerFnS,angleFromCoord-90,TMP_DISTANCE);
+        manageMarker(centerLeft,"left");
+        manageMarker(centerRight,"right");
+
+        if(AreaUtils.containsLocation(getLatLngfromLatLong(centerRight),this.polygonOverlay.getCoords(),GEODESIC)){
+            sendRecyclerMessage("오른쪽으로 꺾는다 +90");
+            turnDirection = 1;
+        }else if(AreaUtils.containsLocation(getLatLngfromLatLong(centerLeft),this.polygonOverlay.getCoords(),GEODESIC)){
+            sendRecyclerMessage("왼쪽으로 꺾는다 -90");
+            turnDirection = -1;
+        }else {
+            sendRecyclerMessage("거리가 너무멀다 or 다각형이 너무작다");
+            turnDirection = 0;
+        }
+
+        while (!(turnDirection==0)){//반복: 교점없을때까지 (교점은 폴리곤 내부만 인정한다)
             int lastPointIndex = resultPathLatLngs.size()-1;
             LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
             LatLong lastLatLong = new LatLong(lastPoint.latitude, lastPoint.longitude);
-            //90도 꺾고 일정 거리 이동하여 점을만듦
-            LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+90, TMP_DISTANCE*distance_count);
+
+            //각도 꺾고 일정 거리 이동하여 점을만듦
+            LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+(90*turnDirection), TMP_DISTANCE*distance_count);
+
             //이때 그 점이 바운드를 넘기면 break
-            List<LatLng> polyBounds = new ArrayList<>();{
-                polyBounds.add(polygonOverlay.getBounds().getSouthEast());
-                polyBounds.add(polygonOverlay.getBounds().getSouthWest());
-                polyBounds.add(polygonOverlay.getBounds().getNorthWest());
-                polyBounds.add(polygonOverlay.getBounds().getNorthEast());
-            }
-            if(AreaUtils.containsLocation(getLatLngfromLatLong(nextFinderPoint), polyBounds , GEODESIC)){
+            if(AreaUtils.containsLocation(getLatLngfromLatLong(nextFinderPoint), latLngsBoundx2 , GEODESIC)){
                 sendRecyclerMessage("finder가 bound내부임 -> " + distance_count);
                 manageMarker(getLatLngfromLatLong(nextFinderPoint), "nfinder", MarkerIcons.YELLOW);
                 distance_count++;
@@ -771,6 +804,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             //가장 긴 길이 = bound의 대각선
             double longest = polygonOverlay.getBounds().getNorthEast().distanceTo(polygonOverlay.getBounds().getSouthWest());
+
             //그 길이와 아까 구한 각도를 이용하여 위방향(각도방향)과 아래방향(각도 +-180)선을 그림
             LatLong sameDirection = GeoTools.newCoordFromBearingAndDistance(nextFinderPoint,angleFromCoord,longest);
             manageMarker(getLatLngfromLatLong(sameDirection), "same", MarkerIcons.BLUE);
@@ -796,21 +830,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void makePolygon(LatLng latLng){
-        Marker marker = new Marker(latLng);
-        marker.setHeight(50);
-        marker.setWidth(50);
-        marker.setMap(naverMap);
-        polyMarkers.add(marker);
+        manageMarker(latLng,".");
         polyMarkersLatLng.add(latLng);
 
-
-        if(polyMarkers.size()>= 3){
-            sortMarkerClockwise(polyMarkers);
+        if(polyMarkersLatLng.size()>= 3){
             sortLatLngClockwise(polyMarkersLatLng);
             polygon.setCoords(polyMarkersLatLng);
             polygon.setMap(naverMap);
         }
-        sendRecyclerMessage(String.format("%d",polyMarkers.size()));
+        sendRecyclerMessage(String.format("%d",polyMarkersLatLng.size()));
     }
 
     public static void sortLatLngClockwise(List<LatLng> latlngs) {
@@ -1161,12 +1189,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void clear_overlay(View view) {
         polyMarkersLatLng.clear();
-        polygon.setMap(null);
-
-        for(Marker marker : polyMarkers){
-            marker.setMap(null);
-        }
-        polyMarkers.clear();
+        polygonOverlay.setMap(null);
 
         for(Marker marker: markers){
             marker.setMap(null);

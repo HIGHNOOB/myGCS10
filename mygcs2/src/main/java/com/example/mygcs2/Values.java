@@ -16,19 +16,9 @@ public class Values {
     public static int START_POINT_NEAREST = 0;
     public static int START_POINT_LONGEST = 1;
 
-    public static double EARTH = 6378.137;  //radius of the earth in kilometer
-
-    public static int DIAGONAL_TYPE_HORIZONTAL = 0;
-    public static int DIAGONAL_TYPE_VERTICAL = 1;
-    public static int DIAGONAL_TYPE_NW_TO_SE = 2;
-    public static int DIAGONAL_TYPE_NE_TO_SW = 3;
-
-    public static int DIRECTION_NE =0;
-    public static int DIRECTION_NW =1;
-    public static int DIRECTION_SE =2;
-    public static int DIRECTION_SW =3;
-
     public static boolean GEODESIC = true;
+
+    public static int MARKER_SIZE = 20;
 
 
 }
