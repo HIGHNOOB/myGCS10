@@ -16,7 +16,7 @@ public class Values {
     public static int START_POINT_NEAREST = 0;
     public static int START_POINT_LONGEST = 1;
 
-    public static boolean GEODESIC = true;
+    public static boolean GEODESIC = false;
 
     public static int MARKER_SIZE = 20;
 
