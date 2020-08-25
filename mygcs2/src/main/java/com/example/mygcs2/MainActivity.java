@@ -66,6 +66,7 @@ import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import org.droidplanner.services.android.impl.core.helpers.geoTools.GeoTools;
 import org.droidplanner.services.android.impl.core.helpers.geoTools.LineLatLong;
+import org.droidplanner.services.android.impl.core.helpers.geoTools.LineTools;
 import org.droidplanner.services.android.impl.core.helpers.units.Area;
 import org.droidplanner.services.android.impl.core.polygon.Polygon;
 import org.droidplanner.services.android.impl.core.survey.grid.CircumscribedGrid;
@@ -104,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     int rNeghborInedx;
     int lNeghborInedx;
 
+    int testcount =0 ;
 
     PolygonOverlay polygonOverlay = new PolygonOverlay();
     List<LatLng> latLngsBoundx2 = new ArrayList<>();
@@ -740,11 +742,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
+    public List<LatLong> getIntersection(Polygon polygon, LineLatLong gridLine){
+        List<LatLong> latLongs = new ArrayList<>();
+        for(LineLatLong lineLatLong: polygon.getLines()){
+            LatLong intersection = LineTools.FindLineIntersection(lineLatLong,gridLine);
+            if(intersection != null){
+                latLongs.add(intersection);
+            }
+        }
+        return latLongs;
+    }
+
     public void getDronePolyPath(PolygonOverlay polygon, int distance, float angle){
         int startPoint = START_POINT_NEAREST;
         getDronePolyPath(polygon, distance, angle, startPoint);
     }
-
+    //TODO main
     public void getDronePolyPath(PolygonOverlay polygonOverlay, int distance, float angle, int startPoint){
         Polygon polygon = getPolygonfromPolygonOverlay(polygonOverlay);
         List<LatLng> polygonVertices = getLatLngListfromLatLongList(polygon.getPoints());
@@ -785,6 +798,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             turnDirection = 0;
         }
 
+        List<LatLong> target = new ArrayList<>();
+
         while (!(turnDirection==0)){//반복: 교점없을때까지 (교점은 폴리곤 내부만 인정한다)
             int lastPointIndex = resultPathLatLngs.size()-1;
             LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
@@ -812,13 +827,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             manageMarker(getLatLngfromLatLong(anotherDirection), "another", MarkerIcons.RED);
 
             //선과 폴리곤의 교점 (각 선에서 가장 가까운 하나만)
+            List<LatLong> intersectionList = getIntersection(polygon,new LineLatLong(anotherDirection,sameDirection));
+            if(intersectionList.size()>2) sendRecyclerMessage("3개 이상의 교점 발견, 오류가능성 있음, 수정바람");
 
 
+            for(LatLong intersection: intersectionList){
+                //직전거리와 비교하여 짧은곳 먼저.
+
+            }
             //이 두개
 
             //반대쪽도 없으면 break
 
             //교점있는경우 가까운교점 인정
+        }
+        for(LatLong latLong: target){
+            manageMarker(latLong,"타겟"+testcount);
+            testcount++;
         }
 
         //임시 확인용
@@ -1190,6 +1215,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void clear_overlay(View view) {
         polyMarkersLatLng.clear();
         polygonOverlay.setMap(null);
+        polygon.setMap(null);
 
         for(Marker marker: markers){
             marker.setMap(null);
