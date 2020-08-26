@@ -798,15 +798,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             turnDirection = 0;
         }
 
-        List<LatLong> target = new ArrayList<>();
+        //가장 긴 길이 = bound의 대각선
+        double longest = polygonOverlay.getBounds().getNorthEast().distanceTo(polygonOverlay.getBounds().getSouthWest());
 
+        int testcnt=0;
+
+        int lastPointIndex = resultPathLatLngs.size()-1;
+        LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
+        LatLong lastLatLong = new LatLong(lastPoint.latitude, lastPoint.longitude);
         while (!(turnDirection==0)){//반복: 교점없을때까지 (교점은 폴리곤 내부만 인정한다)
-            int lastPointIndex = resultPathLatLngs.size()-1;
-            LatLng lastPoint = resultPathLatLngs.get(lastPointIndex);
-            LatLong lastLatLong = new LatLong(lastPoint.latitude, lastPoint.longitude);
-
             //각도 꺾고 일정 거리 이동하여 점을만듦
-            LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+(90*turnDirection), TMP_DISTANCE*distance_count);
+            LatLong nextFinderPoint = GeoTools.newCoordFromBearingAndDistance(lastLatLong, angleFromCoord+(90*turnDirection), TMP_DISTANCE);
+            angleFromCoord *= -1;
+            turnDirection *= -1;
 
             //이때 그 점이 바운드를 넘기면 break
             if(AreaUtils.containsLocation(getLatLngfromLatLong(nextFinderPoint), latLngsBoundx2 , GEODESIC)){
@@ -817,10 +821,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 sendRecyclerMessage("이제 아님");
                 break;
             }
-            //가장 긴 길이 = bound의 대각선
-            double longest = polygonOverlay.getBounds().getNorthEast().distanceTo(polygonOverlay.getBounds().getSouthWest());
 
-            //그 길이와 아까 구한 각도를 이용하여 위방향(각도방향)과 아래방향(각도 +-180)선을 그림
+            //구한 각도를 이용하여 위방향(각도방향)과 아래방향(각도 +-180)선을 그림
             LatLong sameDirection = GeoTools.newCoordFromBearingAndDistance(nextFinderPoint,angleFromCoord,longest);
             manageMarker(getLatLngfromLatLong(sameDirection), "same", MarkerIcons.BLUE);
             LatLong anotherDirection = GeoTools.newCoordFromBearingAndDistance(nextFinderPoint,angleFromCoord+180,longest);
@@ -828,21 +830,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             //선과 폴리곤의 교점 (각 선에서 가장 가까운 하나만)
             List<LatLong> intersectionList = getIntersection(polygon,new LineLatLong(anotherDirection,sameDirection));
-            if(intersectionList.size()>2) sendRecyclerMessage("3개 이상의 교점 발견, 오류가능성 있음, 수정바람");
+            if(intersectionList.size()>2) sendRecyclerMessage("3개 이상의 교점 발견, 오류가능성 있음");//TODO 3개이상의교점상황 추가
 
-
+            //직전거리와 비교하여 짧은곳 먼저.
+            List<Double> distances = new ArrayList<Double>();
             for(LatLong intersection: intersectionList){
-                //직전거리와 비교하여 짧은곳 먼저.
-
+                distances.add(getLatLngfromLatLong(intersection).distanceTo(lastPoint));
             }
-            //이 두개
-
-            //반대쪽도 없으면 break
-
-            //교점있는경우 가까운교점 인정
+            if(distances.size()>1){
+                if(distances.get(0)>distances.get(1)){
+                    resultPathLatLngs.add(getLatLngfromLatLong(intersectionList.get(1)));
+                    resultPathLatLngs.add(getLatLngfromLatLong(intersectionList.get(0)));
+                    lastLatLong = intersectionList.get(0);
+                } else {
+                    resultPathLatLngs.add(getLatLngfromLatLong(intersectionList.get(0)));
+                    resultPathLatLngs.add(getLatLngfromLatLong(intersectionList.get(1)));
+                    lastLatLong = intersectionList.get(1);
+                }
+            }else if(distances.size()==1){
+                resultPathLatLngs.add(getLatLngfromLatLong(intersectionList.get(0)));
+            }else {
+                sendRecyclerMessage("더이상 교점없음");
+                break;
+            }
+            testcnt++;
+            if (testcnt > 100) {
+                break;
+            }
         }
-        for(LatLong latLong: target){
-            manageMarker(latLong,"타겟"+testcount);
+        sendRecyclerMessage("횟수"+testcnt);
+        for(LatLng latLng: resultPathLatLngs){
+            manageMarker(latLng,"타겟"+testcount);
             testcount++;
         }
 
